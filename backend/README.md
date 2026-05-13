@@ -28,3 +28,6 @@ This ensures VS Code uses the correct environment.
 ## pip install python-multipart==0.0.26
 ## pip install openai==2.32.0
 ## مهم: نعمل ال .env (على جهاز كل واحد يدوي منعطيهم الاكواد يلي عنا فيه)
+...........................
+ requirements مشان تحطو المكتبة الجديدة  بعد ما تنزلوها وتعملولها , بتكتبو هاي مشان تضيفو المكتبة عال 
+ ## pip freeze > requirements.txt

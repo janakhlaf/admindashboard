@@ -29,3 +29,7 @@ git tag backup-v1
 git push origin backup-v1
 ********************************
 all edits done without the payment issus.****
+...........
+ازا كنتو شغالين وعاملين جيت بول  وبدكم تقيمو الي عملتوه بتكتبو:
+## git reset --hard
+## git clean -fd
