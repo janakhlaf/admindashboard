@@ -1,47 +1,105 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Film as FilmIcon } from "lucide-react";
 import { toast } from "sonner";
 import { type Film, formatDate, formatBytes } from "@/lib/index";
-import { mockFilms } from "@/data/index";
+import {
+  getFilms,
+  approveFilm,
+  rejectFilm,
+  deleteFilm,
+} from "@/api/films";
 import { StatusBadge, NeonButton, PageHeader, SearchInput } from "@/components/NexusUI";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 
 export default function Films() {
-  const [films, setFilms] = useState<Film[]>(mockFilms);
+  const [films, setFilms] = useState<Film[]>([]);
   const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "approved" | "rejected">("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; filmId: string | null }>({
     open: false,
     filmId: null,
   });
+
+  useEffect(() => {
+    fetchFilms();
+  }, []);
+
+  const fetchFilms = async () => {
+    try {
+      const data = await getFilms();
+
+      const mappedFilms = data.map((film: any) => ({
+        id: String(film.id),
+        title: film.title,
+        category: film.category,
+        uploader: `User ${film.user_id}`,
+        uploadDate: new Date().toISOString(),
+        size: Number(film.file_size) || 0,
+        status: film.status,
+        thumbnail: film.thumbnail_url || film.thumbnail_basic,
+      }));
+
+      setFilms(mappedFilms);
+    } catch (error) {
+      toast.error("Failed to load films");
+    }
+  };
+
   const filteredFilms = films.filter((film) => {
     const matchesStatus = statusFilter === "all" || film.status === statusFilter;
     const matchesSearch = film.title.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesStatus && matchesSearch;
   });
 
-  const handleApprove = (filmId: string) => {
-    setFilms((prev) =>
-      prev.map((film) => (film.id === filmId ? { ...film, status: "approved" as const } : film))
-    );
-    toast.success("Film approved successfully");
+  const handleApprove = async (filmId: string) => {
+    try {
+      await approveFilm(Number(filmId));
+
+      setFilms((prev) =>
+        prev.map((film) =>
+          film.id === filmId ? { ...film, status: "approved" as const } : film
+        )
+      );
+
+      toast.success("Film approved successfully");
+    } catch (error) {
+      toast.error("Failed to approve film");
+    }
   };
 
-  const handleReject = (filmId: string) => {
-    setFilms((prev) =>
-      prev.map((film) => (film.id === filmId ? { ...film, status: "rejected" as const } : film))
-    );
-    toast.error("Film rejected");
+  const handleReject = async (filmId: string) => {
+    try {
+      await rejectFilm(Number(filmId));
+
+      setFilms((prev) =>
+        prev.map((film) =>
+          film.id === filmId ? { ...film, status: "rejected" as const } : film
+        )
+      );
+
+      toast.error("Film rejected");
+    } catch (error) {
+      toast.error("Failed to reject film");
+    }
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (deleteDialog.filmId) {
-      setFilms((prev) => prev.filter((film) => film.id !== deleteDialog.filmId));
-      toast.success("Film deleted permanently");
-      setDeleteDialog({ open: false, filmId: null });
+      try {
+        await deleteFilm(Number(deleteDialog.filmId));
+
+        setFilms((prev) =>
+          prev.filter((film) => film.id !== deleteDialog.filmId)
+        );
+
+        toast.success("Film deleted permanently");
+        setDeleteDialog({ open: false, filmId: null });
+      } catch (error) {
+        toast.error("Failed to delete film");
+      }
     }
   };
 
@@ -49,9 +107,7 @@ export default function Films() {
     hidden: { opacity: 0 },
     visible: {
       opacity: 1,
-      transition: {
-        staggerChildren: 0.05,
-      },
+      transition: { staggerChildren: 0.05 },
     },
   };
 
@@ -61,7 +117,7 @@ export default function Films() {
       opacity: 1,
       y: 0,
       transition: {
-        type: "spring",
+        type: "spring" as const,
         stiffness: 300,
         damping: 30,
       },
@@ -118,6 +174,7 @@ export default function Films() {
                           <FilmIcon className="w-16 h-16 text-primary/50" />
                         </div>
                       )}
+
                       <div className="absolute top-3 right-3">
                         <StatusBadge status={film.status} />
                       </div>
@@ -159,6 +216,7 @@ export default function Films() {
                             >
                               Approve
                             </NeonButton>
+
                             <NeonButton
                               variant="reject"
                               size="sm"
@@ -169,6 +227,7 @@ export default function Films() {
                             </NeonButton>
                           </>
                         )}
+
                         <NeonButton
                           variant="delete"
                           size="sm"
@@ -210,7 +269,6 @@ export default function Films() {
         confirmLabel="Delete"
         variant="destructive"
       />
-
     </div>
   );
 }

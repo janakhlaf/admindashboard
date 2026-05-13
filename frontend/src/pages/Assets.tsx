@@ -1,6 +1,8 @@
-import { useState, useMemo } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Box } from "lucide-react";
+import { Canvas } from "@react-three/fiber";
+import { OrbitControls, useGLTF, Center } from "@react-three/drei";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
@@ -11,7 +13,12 @@ import {
   formatCurrency,
   cn,
 } from "@/lib/index";
-import { mockAssets } from "@/data/index";
+import {
+  getAssets,
+  approveAsset,
+  rejectAsset,
+  deleteAsset,
+} from "@/api/assets";
 import {
   StatusBadge,
   NeonButton,
@@ -22,57 +29,148 @@ import { ConfirmDialog } from "@/components/ConfirmDialog";
 
 type StatusFilter = "all" | "pending" | "approved" | "rejected";
 
-const ASSET_CATEGORIES = [
-  "Character",
-  "Environment",
-  "Vehicle",
-  "Prop",
-  "Architecture",
-  "Creature",
-];
+type AdminAsset = Asset & {
+  preview?: string;
+  fileType?: string;
+};
+
+function GLBModel({ url }: { url: string }) {
+  const gltf = useGLTF(url);
+
+  return (
+    <Center>
+      <primitive object={gltf.scene} scale={1.6} />
+    </Center>
+  );
+}
+
+function AssetViewer({ url, name }: { url?: string; name: string }) {
+  if (!url) {
+    return <Box className="w-24 h-24 neon-text-purple" />;
+  }
+
+  return (
+    <Canvas camera={{ position: [0, 1.2, 4], fov: 45 }}>
+      <ambientLight intensity={1.5} />
+      <directionalLight position={[3, 3, 3]} intensity={2} />
+
+      <Suspense fallback={null}>
+        <GLBModel url={url} />
+      </Suspense>
+
+      <OrbitControls
+        enableZoom={false}
+        enablePan={false}
+        autoRotate
+        autoRotateSpeed={1.5}
+      />
+    </Canvas>
+  );
+}
 
 export default function Assets() {
-  const [assets, setAssets] = useState<Asset[]>(mockAssets);
+  const [assets, setAssets] = useState<AdminAsset[]>([]);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
+  const [selectedAsset, setSelectedAsset] = useState<AdminAsset | null>(null);
+
+  useEffect(() => {
+    fetchAssets();
+  }, []);
+
+  const fetchAssets = async () => {
+    try {
+      const data = await getAssets();
+
+      const mappedAssets: AdminAsset[] = data.map((asset: any) => ({
+        id: String(asset.id),
+        name: asset.name,
+        category: asset.category || "Uncategorized",
+        price: Number(asset.price) || 0,
+        status: asset.status,
+        uploader: `User ${asset.user_id}`,
+        uploadDate: new Date().toISOString(),
+        fileSize: Number(asset.file_size) || 0,
+        polygons: 0,
+        preview: asset.preview_url,
+        fileType: asset.file_type || "glb",
+      }));
+
+      setAssets(mappedAssets);
+    } catch (error) {
+      toast.error("Failed to load assets");
+    }
+  };
 
   const filteredAssets = useMemo(() => {
     return assets.filter((asset) => {
       const matchesStatus =
         statusFilter === "all" || asset.status === statusFilter;
+
       const matchesSearch = asset.name
         .toLowerCase()
         .includes(searchQuery.toLowerCase());
+
       return matchesStatus && matchesSearch;
     });
   }, [assets, statusFilter, searchQuery]);
 
-  const handleApprove = (assetId: string) => {
-    setAssets((prev) =>
-      prev.map((a) => (a.id === assetId ? { ...a, status: "approved" } : a))
-    );
-    toast.success("Asset approved successfully");
-  };
+  const handleApprove = async (assetId: string) => {
+    try {
+      await approveAsset(Number(assetId));
 
-  const handleReject = (assetId: string) => {
-    setAssets((prev) =>
-      prev.map((a) => (a.id === assetId ? { ...a, status: "rejected" } : a))
-    );
-    toast.error("Asset rejected");
-  };
+      setAssets((prev) =>
+        prev.map((asset) =>
+          asset.id === assetId
+            ? { ...asset, status: "approved" as const }
+            : asset
+        )
+      );
 
-  const handleDelete = () => {
-    if (selectedAsset) {
-      setAssets((prev) => prev.filter((a) => a.id !== selectedAsset.id));
-      toast.success(`${selectedAsset.name} deleted`);
-      setDeleteDialogOpen(false);
-      setSelectedAsset(null);
+      toast.success("Asset approved successfully");
+    } catch {
+      toast.error("Failed to approve asset");
     }
   };
 
-  const openDeleteDialog = (asset: Asset) => {
+  const handleReject = async (assetId: string) => {
+    try {
+      await rejectAsset(Number(assetId));
+
+      setAssets((prev) =>
+        prev.map((asset) =>
+          asset.id === assetId
+            ? { ...asset, status: "rejected" as const }
+            : asset
+        )
+      );
+
+      toast.error("Asset rejected");
+    } catch {
+      toast.error("Failed to reject asset");
+    }
+  };
+
+  const handleDelete = async () => {
+    if (selectedAsset) {
+      try {
+        await deleteAsset(Number(selectedAsset.id));
+
+        setAssets((prev) =>
+          prev.filter((asset) => asset.id !== selectedAsset.id)
+        );
+
+        toast.success(`${selectedAsset.name} deleted`);
+        setDeleteDialogOpen(false);
+        setSelectedAsset(null);
+      } catch {
+        toast.error("Failed to delete asset");
+      }
+    }
+  };
+
+  const openDeleteDialog = (asset: AdminAsset) => {
     setSelectedAsset(asset);
     setDeleteDialogOpen(true);
   };
@@ -123,14 +221,15 @@ export default function Assets() {
                     "hover:border-neon-cyan"
                   )}
                 >
-                  <div className="aspect-square bg-space-navy flex items-center justify-center relative">
-                    <Box className="w-24 h-24 neon-text-purple" />
+                  <div className="aspect-square bg-space-navy flex items-center justify-center relative overflow-hidden">
+                    <AssetViewer url={asset.preview} name={asset.name} />
+
                     <div className="absolute top-3 right-3">
                       <Badge
                         variant="outline"
                         className="bg-primary/10 text-primary border-primary/30 text-xs"
                       >
-                        GLB
+                        {asset.fileType}
                       </Badge>
                     </div>
                   </div>
@@ -144,6 +243,7 @@ export default function Assets() {
                       <Badge variant="outline" className="text-xs">
                         {asset.category}
                       </Badge>
+
                       <span className="font-jetbrains text-sm font-semibold neon-text-cyan">
                         {formatCurrency(asset.price)}
                       </span>
@@ -174,6 +274,7 @@ export default function Assets() {
                           >
                             Approve
                           </NeonButton>
+
                           <NeonButton
                             variant="reject"
                             size="sm"
@@ -184,6 +285,7 @@ export default function Assets() {
                           </NeonButton>
                         </div>
                       )}
+
                       <NeonButton
                         variant="delete"
                         size="sm"
@@ -224,7 +326,6 @@ export default function Assets() {
         confirmLabel="Delete"
         variant="destructive"
       />
-
     </div>
   );
 }

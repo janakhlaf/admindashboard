@@ -38,13 +38,14 @@ export interface Asset {
   name: string;
   category: string;
   price: number;
-  fileSize: number;
-  format: "GLB";
   status: "pending" | "approved" | "rejected";
   uploader: string;
   uploadDate: string;
-  tags: string[];
+  fileSize: number;
   polygons: number;
+
+  preview?: string;
+  fileType?: string;
 }
 
 export interface Order {
