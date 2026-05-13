@@ -1,7 +1,7 @@
 🔹1- تستدعي المشروع (clone)
-## git clone https://github.com/janakhlaf/Webapproved.git
+## git clone https://github.com/janakhlaf/admindashboard.git
 2- تفوت على الفولدر
-## cd Webapproved
+## cd admindashboard
 3- تفتح المشروع
 ## code .
 ##(مرة وحدة فقط ما رح تستخدم كمان مرة)
