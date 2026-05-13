@@ -1,0 +1,383 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Orbitron:wght@500;600;700;900&family=JetBrains+Mono:wght@400;500;600&display=swap");
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+==========================================================================
+【AI HANDOVER NOTE】
+1. DESIGN PHILOSOPHY:
+   - Atmosphere-First Sci-Fi Control Center: This design system embodies a futuristic command center aesthetic, inspired by cyberpunk interfaces and high-tech AI systems. The core principle is "Immersive Authority" - every interaction should make the admin feel like they're controlling a powerful, sophisticated platform.
+   - Visual Style: Glassmorphism 2.0 meets Neon Physicality. We combine semi-transparent surfaces with backdrop blur, layered with electric neon rim-lighting and subtle glow effects. The depth is achieved through multiple z-layers, ambient shadows, and animated gradient borders.
+   - Why This Style: For a premium admin dashboard managing films, 3D assets, and AI experiences, the interface must reflect the cutting-edge nature of the content. The dark sci-fi aesthetic creates focus, reduces eye strain during long sessions, and the neon accents provide clear visual hierarchy and state feedback.
+
+2. TYPOGRAPHY:
+   - Sans Primary (Inter): Chosen for exceptional readability at all sizes, with a neutral, professional character. Inter's tight spacing and clear letterforms ensure data-heavy tables remain legible.
+   - Display/Accent (Orbitron): Used sparingly for section headers and key metrics. Its geometric, futuristic letterforms reinforce the sci-fi aesthetic without compromising readability. Weight 700-900 for impact.
+   - Mono (JetBrains Mono): Essential for displaying technical data, timestamps, IDs, file sizes, and code snippets. Its clear distinction between characters (0/O, 1/l/I) prevents admin errors.
+
+3. COLOR SYSTEM:
+   - Brand Foundation: Electric Purple (Hue 270-280) as the primary brand color, representing innovation, creativity, and premium quality. This maps directly to --primary and --ring for interactive elements.
+   - Accent System: Cyan (Hue 190-200) serves as --accent for secondary actions, success states, and data visualization highlights. The purple-cyan duality creates a vibrant, energetic palette while maintaining professional contrast.
+   - Background Architecture: Deep space blacks (L: 0.08-0.12) with subtle navy blue undertones (Hue 240) create depth. Card surfaces use slightly elevated lightness (L: 0.14-0.16) with glassmorphism blur.
+   - Semantic Colors: Destructive uses electric red (Hue 0-10) with high chroma for critical actions. Success employs cyan-green (Hue 160-170) for approvals. Warning uses amber-orange (Hue 40) for pending states.
+   - Neon Glow Implementation: All interactive elements use elevated chroma (C: 0.20-0.28) in dark mode to achieve the signature neon effect. Ring colors have intentionally high saturation for visibility.
+
+4. USAGE GUIDE:
+   - Layout Type: Fixed sidebar (64px collapsed, 240px expanded) + top nav + full-width main content area. Use CSS Grid for dashboard stat cards (repeat(auto-fit, minmax(280px, 1fr))).
+   - Glassmorphism Recipe: background: oklch(0.14 0.02 240 / 0.6), backdrop-filter: blur(12px), border: 1px solid oklch(0.3 0.1 270 / 0.3). Apply to cards, modals, popovers.
+   - Neon Glow Effects: Use box-shadow with multiple layers: 0 0 20px oklch(0.7 0.25 270 / 0.4), 0 0 40px oklch(0.7 0.25 270 / 0.2). Apply on :hover and :focus states.
+   - Rim-Light Technique: Add inset box-shadow: inset 0 1px 0 oklch(0.5 0.15 270 / 0.3) to top edges of cards for subtle 3D depth.
+   - Animation Standards: Use transition-duration: 200ms for micro-interactions, 300ms for card hovers, 150ms for button states. Easing: cubic-bezier(0.4, 0, 0.2, 1).
+   - Data Visualization: Use chart_1 (purple) for primary metrics, chart_2 (cyan) for secondary, chart_3 (pink) for comparisons, chart_4 (blue) for trends, chart_5 (amber) for warnings.
+   - Sidebar Behavior: Icons glow on hover with --sidebar-accent. Active state uses --sidebar-primary with full-width neon border-left: 3px solid.
+   - Confirmation Dialogs: Always use destructive color scheme for delete actions. Include 2-second undo toast for non-critical deletions.
+   - Status Badges: Pending (amber with pulse animation), Approved (cyan/green with checkmark), Rejected (red with X icon). Use pill shape with subtle glow.
+   - Grid Background: Apply subtle electric grid pattern using CSS: background-image: linear-gradient(oklch(0.2 0.05 270 / 0.1) 1px, transparent 1px), linear-gradient(90deg, oklch(0.2 0.05 270 / 0.1) 1px, transparent 1px); background-size: 40px 40px.
+==========================================================================
+*/
+
+:root {
+  /* Typography */
+  --font-sans: 'Inter', 'Orbitron', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Courier New', monospace;
+  
+  /* Radius */
+  --radius: 0.75rem;
+
+  /* Core UI Tokens */
+  --background: oklch(0.98 0.002 240);
+  --foreground: oklch(0.15 0.01 240);
+  --card: oklch(0.99 0.002 240);
+  --card-foreground: oklch(0.15 0.01 240);
+  --popover: oklch(0.99 0.002 240);
+  --popover-foreground: oklch(0.15 0.01 240);
+  --primary: oklch(0.55 0.22 275);
+  --primary-foreground: oklch(0.98 0.005 275);
+  --secondary: oklch(0.92 0.01 240);
+  --secondary-foreground: oklch(0.20 0.01 240);
+  --muted: oklch(0.94 0.01 240);
+  --muted-foreground: oklch(0.48 0.01 240);
+  --accent: oklch(0.60 0.18 195);
+  --accent-foreground: oklch(0.98 0.005 195);
+  --destructive: oklch(0.58 0.22 10);
+  --destructive-foreground: oklch(0.98 0.005 10);
+  --border: oklch(0.88 0.01 240);
+  --input: oklch(0.88 0.01 240);
+  --ring: oklch(0.55 0.22 275);
+  
+  /* Chart Tokens */
+  --chart-1: oklch(0.55 0.22 275);
+  --chart-2: oklch(0.60 0.18 195);
+  --chart-3: oklch(0.62 0.20 320);
+  --chart-4: oklch(0.52 0.16 240);
+  --chart-5: oklch(0.65 0.18 50);
+  
+  /* Sidebar Tokens */
+  --sidebar: oklch(0.97 0.002 240);
+  --sidebar-foreground: oklch(0.20 0.01 240);
+  --sidebar-primary: oklch(0.55 0.22 275);
+  --sidebar-primary-foreground: oklch(0.98 0.005 275);
+  --sidebar-accent: oklch(0.60 0.18 195);
+  --sidebar-accent-foreground: oklch(0.98 0.005 195);
+  --sidebar-border: oklch(0.88 0.01 240);
+  --sidebar-ring: oklch(0.55 0.22 275);
+}
+
+.dark {
+  --background: oklch(0.08 0.015 240);
+  --foreground: oklch(0.92 0.01 240);
+  --card: oklch(0.12 0.02 240);
+  --card-foreground: oklch(0.92 0.01 240);
+  --popover: oklch(0.14 0.02 240);
+  --popover-foreground: oklch(0.92 0.01 240);
+  --primary: oklch(0.70 0.25 275);
+  --primary-foreground: oklch(0.10 0.02 275);
+  --secondary: oklch(0.18 0.02 240);
+  --secondary-foreground: oklch(0.88 0.01 240);
+  --muted: oklch(0.16 0.02 240);
+  --muted-foreground: oklch(0.58 0.01 240);
+  --accent: oklch(0.72 0.20 195);
+  --accent-foreground: oklch(0.10 0.02 195);
+  --destructive: oklch(0.65 0.25 10);
+  --destructive-foreground: oklch(0.95 0.01 10);
+  --border: oklch(0.25 0.03 240);
+  --input: oklch(0.22 0.03 240);
+  --ring: oklch(0.70 0.28 275);
+  
+  /* Chart Tokens */
+  --chart-1: oklch(0.70 0.25 275);
+  --chart-2: oklch(0.72 0.20 195);
+  --chart-3: oklch(0.68 0.22 320);
+  --chart-4: oklch(0.60 0.18 240);
+  --chart-5: oklch(0.70 0.20 50);
+  
+  /* Sidebar Tokens */
+  --sidebar: oklch(0.10 0.018 240);
+  --sidebar-foreground: oklch(0.88 0.01 240);
+  --sidebar-primary: oklch(0.70 0.25 275);
+  --sidebar-primary-foreground: oklch(0.10 0.02 275);
+  --sidebar-accent: oklch(0.72 0.20 195);
+  --sidebar-accent-foreground: oklch(0.10 0.02 195);
+  --sidebar-border: oklch(0.22 0.03 240);
+  --sidebar-ring: oklch(0.70 0.28 275);
+}
+
+@theme inline {
+  /* Shadcn Core Mapping */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  /* Charts Mapping */
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  /* Sidebar Mapping */
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  /* Typography */
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+
+  /* Radius */
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  html {
+    @apply scroll-smooth antialiased;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans min-h-screen;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-semibold tracking-tight;
+  }
+
+  code, pre {
+    @apply font-mono;
+  }
+
+  ::selection {
+    @apply bg-primary/20 text-primary;
+  }
+
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-muted-foreground/20 rounded-full hover:bg-muted-foreground/40;
+  }
+}
+
+/* =========================================================
+   NEXUS ADMIN - Neon Glow Utilities & Futuristic Effects
+   ========================================================= */
+
+:root {
+  --neon-purple: oklch(0.70 0.25 275);
+  --neon-cyan: oklch(0.72 0.20 195);
+  --neon-pink: oklch(0.68 0.22 320);
+  --neon-amber: oklch(0.70 0.20 50);
+  --neon-red: oklch(0.65 0.25 10);
+  --space-black: oklch(0.06 0.015 240);
+  --space-navy: oklch(0.10 0.025 240);
+  --glass-bg: oklch(0.12 0.02 240 / 0.7);
+  --glass-border: oklch(0.35 0.08 270 / 0.3);
+}
+
+@theme inline {
+  --color-neon-purple: var(--neon-purple);
+  --color-neon-cyan: var(--neon-cyan);
+  --color-neon-pink: var(--neon-pink);
+  --color-neon-amber: var(--neon-amber);
+  --color-neon-red: var(--neon-red);
+  --color-space-black: var(--space-black);
+  --color-space-navy: var(--space-navy);
+  --font-orbitron: 'Orbitron', sans-serif;
+  --font-jetbrains: 'JetBrains Mono', monospace;
+}
+
+@layer utilities {
+  /* Glassmorphism cards */
+  .glass-card {
+    background: oklch(0.12 0.02 240 / 0.6);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid oklch(0.30 0.08 270 / 0.25);
+  }
+  .glass-card:hover {
+    border-color: oklch(0.50 0.15 270 / 0.5);
+    box-shadow: 0 0 20px oklch(0.70 0.25 275 / 0.15), 0 8px 32px oklch(0.06 0.015 240 / 0.8);
+  }
+
+  /* Neon glow borders */
+  .neon-border-purple {
+    border: 1px solid oklch(0.70 0.25 275 / 0.5);
+    box-shadow: 0 0 12px oklch(0.70 0.25 275 / 0.3), inset 0 1px 0 oklch(0.70 0.25 275 / 0.15);
+  }
+  .neon-border-cyan {
+    border: 1px solid oklch(0.72 0.20 195 / 0.5);
+    box-shadow: 0 0 12px oklch(0.72 0.20 195 / 0.3), inset 0 1px 0 oklch(0.72 0.20 195 / 0.15);
+  }
+  .neon-border-pink {
+    border: 1px solid oklch(0.68 0.22 320 / 0.5);
+    box-shadow: 0 0 12px oklch(0.68 0.22 320 / 0.3), inset 0 1px 0 oklch(0.68 0.22 320 / 0.15);
+  }
+  .neon-border-amber {
+    border: 1px solid oklch(0.70 0.20 50 / 0.5);
+    box-shadow: 0 0 12px oklch(0.70 0.20 50 / 0.3), inset 0 1px 0 oklch(0.70 0.20 50 / 0.15);
+  }
+  .neon-border-red {
+    border: 1px solid oklch(0.65 0.25 10 / 0.5);
+    box-shadow: 0 0 12px oklch(0.65 0.25 10 / 0.3);
+  }
+
+  /* Neon text glows */
+  .neon-text-purple { color: oklch(0.80 0.25 275); text-shadow: 0 0 10px oklch(0.70 0.25 275 / 0.6); }
+  .neon-text-cyan { color: oklch(0.85 0.18 195); text-shadow: 0 0 10px oklch(0.72 0.20 195 / 0.6); }
+  .neon-text-pink { color: oklch(0.82 0.20 320); text-shadow: 0 0 10px oklch(0.68 0.22 320 / 0.6); }
+  .neon-text-amber { color: oklch(0.85 0.18 50); text-shadow: 0 0 10px oklch(0.70 0.20 50 / 0.6); }
+  .neon-text-red { color: oklch(0.75 0.22 10); text-shadow: 0 0 10px oklch(0.65 0.25 10 / 0.6); }
+
+  /* Grid background for sci-fi look */
+  .nexus-grid-bg {
+    background-image:
+      linear-gradient(oklch(0.30 0.08 270 / 0.07) 1px, transparent 1px),
+      linear-gradient(90deg, oklch(0.30 0.08 270 / 0.07) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+
+  /* Sidebar active item indicator */
+  .sidebar-active {
+    border-left: 3px solid oklch(0.70 0.25 275);
+    background: oklch(0.70 0.25 275 / 0.12);
+    box-shadow: inset 0 0 20px oklch(0.70 0.25 275 / 0.08);
+  }
+
+  /* Neon button styles */
+  .btn-neon-purple {
+    background: oklch(0.70 0.25 275 / 0.15);
+    border: 1px solid oklch(0.70 0.25 275 / 0.6);
+    color: oklch(0.85 0.20 275);
+    box-shadow: 0 0 12px oklch(0.70 0.25 275 / 0.2);
+    transition: all 0.2s ease;
+  }
+  .btn-neon-purple:hover {
+    background: oklch(0.70 0.25 275 / 0.3);
+    box-shadow: 0 0 20px oklch(0.70 0.25 275 / 0.4);
+  }
+  .btn-neon-cyan {
+    background: oklch(0.72 0.20 195 / 0.15);
+    border: 1px solid oklch(0.72 0.20 195 / 0.6);
+    color: oklch(0.88 0.15 195);
+    box-shadow: 0 0 12px oklch(0.72 0.20 195 / 0.2);
+    transition: all 0.2s ease;
+  }
+  .btn-neon-cyan:hover {
+    background: oklch(0.72 0.20 195 / 0.3);
+    box-shadow: 0 0 20px oklch(0.72 0.20 195 / 0.4);
+  }
+  .btn-neon-red {
+    background: oklch(0.65 0.25 10 / 0.15);
+    border: 1px solid oklch(0.65 0.25 10 / 0.6);
+    color: oklch(0.82 0.20 10);
+    box-shadow: 0 0 12px oklch(0.65 0.25 10 / 0.2);
+    transition: all 0.2s ease;
+  }
+  .btn-neon-red:hover {
+    background: oklch(0.65 0.25 10 / 0.3);
+    box-shadow: 0 0 20px oklch(0.65 0.25 10 / 0.4);
+  }
+
+  /* Status badge styles */
+  .badge-pending {
+    background: oklch(0.70 0.20 50 / 0.15);
+    border: 1px solid oklch(0.70 0.20 50 / 0.4);
+    color: oklch(0.85 0.18 50);
+    animation: pulse-amber 2s infinite;
+  }
+  .badge-approved {
+    background: oklch(0.72 0.20 195 / 0.15);
+    border: 1px solid oklch(0.72 0.20 195 / 0.4);
+    color: oklch(0.88 0.15 195);
+  }
+  .badge-rejected {
+    background: oklch(0.65 0.25 10 / 0.15);
+    border: 1px solid oklch(0.65 0.25 10 / 0.4);
+    color: oklch(0.80 0.20 10);
+  }
+
+  /* Orbitron font utility */
+  .font-orbitron { font-family: 'Orbitron', sans-serif; }
+  .font-jetbrains { font-family: 'JetBrains Mono', monospace; }
+}
+
+/* Keyframe animations */
+@keyframes pulse-amber {
+  0%, 100% { box-shadow: 0 0 4px oklch(0.70 0.20 50 / 0.3); }
+  50% { box-shadow: 0 0 12px oklch(0.70 0.20 50 / 0.6); }
+}
+
+@keyframes neon-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+@keyframes scan-line {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(100vh); }
+}
+
+@keyframes float-up {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-6px); }
+  100% { transform: translateY(0px); }
+}
+
+/* Ensure dark mode is forced for the admin panel */
+html, body {
+  color-scheme: dark;
+}
