@@ -8,19 +8,47 @@ import {
   approveFilm,
   rejectFilm,
   deleteFilm,
+  updateFilm,
 } from "@/api/films";
-import { StatusBadge, NeonButton, PageHeader, SearchInput } from "@/components/NexusUI";
+import {
+  StatusBadge,
+  NeonButton,
+  PageHeader,
+  SearchInput,
+} from "@/components/NexusUI";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 
+type AdminFilm = Film & {
+  description?: string;
+  price?: number;
+  sourceType?: string;
+};
+
 export default function Films() {
-  const [films, setFilms] = useState<Film[]>([]);
-  const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "approved" | "rejected">("all");
+  const [films, setFilms] = useState<AdminFilm[]>([]);
+  const [statusFilter, setStatusFilter] = useState<
+    "all" | "pending" | "approved" | "rejected"
+  >("all");
+
   const [searchQuery, setSearchQuery] = useState("");
-  const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; filmId: string | null }>({
+
+  const [deleteDialog, setDeleteDialog] = useState<{
+    open: boolean;
+    filmId: string | null;
+  }>({
     open: false,
     filmId: null,
+  });
+
+  const [editFilm, setEditFilm] = useState<AdminFilm | null>(null);
+
+  const [editForm, setEditForm] = useState({
+    title: "",
+    category: "",
+    description: "",
+    price: 0,
   });
 
   useEffect(() => {
@@ -40,17 +68,25 @@ export default function Films() {
         size: Number(film.file_size) || 0,
         status: film.status,
         thumbnail: film.thumbnail_url || film.thumbnail_basic,
+        description: film.description || "",
+        price: Number(film.price) || 0,
+        sourceType: film.source_type,
       }));
 
       setFilms(mappedFilms);
-    } catch (error) {
+    } catch {
       toast.error("Failed to load films");
     }
   };
 
   const filteredFilms = films.filter((film) => {
-    const matchesStatus = statusFilter === "all" || film.status === statusFilter;
-    const matchesSearch = film.title.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesStatus =
+      statusFilter === "all" || film.status === statusFilter;
+
+    const matchesSearch = film.title
+      .toLowerCase()
+      .includes(searchQuery.toLowerCase());
+
     return matchesStatus && matchesSearch;
   });
 
@@ -60,12 +96,14 @@ export default function Films() {
 
       setFilms((prev) =>
         prev.map((film) =>
-          film.id === filmId ? { ...film, status: "approved" as const } : film
+          film.id === filmId
+            ? { ...film, status: "approved" as const }
+            : film
         )
       );
 
       toast.success("Film approved successfully");
-    } catch (error) {
+    } catch {
       toast.error("Failed to approve film");
     }
   };
@@ -76,46 +114,88 @@ export default function Films() {
 
       setFilms((prev) =>
         prev.map((film) =>
-          film.id === filmId ? { ...film, status: "rejected" as const } : film
+          film.id === filmId
+            ? { ...film, status: "rejected" as const }
+            : film
         )
       );
 
       toast.error("Film rejected");
-    } catch (error) {
+    } catch {
       toast.error("Failed to reject film");
     }
   };
 
   const handleDelete = async () => {
-    if (deleteDialog.filmId) {
-      try {
-        await deleteFilm(Number(deleteDialog.filmId));
+    if (!deleteDialog.filmId) return;
 
-        setFilms((prev) =>
-          prev.filter((film) => film.id !== deleteDialog.filmId)
-        );
+    try {
+      await deleteFilm(Number(deleteDialog.filmId));
 
-        toast.success("Film deleted permanently");
-        setDeleteDialog({ open: false, filmId: null });
-      } catch (error) {
-        toast.error("Failed to delete film");
-      }
+      setFilms((prev) =>
+        prev.filter((film) => film.id !== deleteDialog.filmId)
+      );
+
+      toast.success("Film deleted permanently");
+
+      setDeleteDialog({
+        open: false,
+        filmId: null,
+      });
+    } catch {
+      toast.error("Failed to delete film");
+    }
+  };
+
+  const openEditDialog = (film: AdminFilm) => {
+    setEditFilm(film);
+
+    setEditForm({
+      title: film.title || "",
+      category: film.category || "",
+      description: film.description || "",
+      price: film.price || 0,
+    });
+  };
+
+  const handleUpdateFilm = async () => {
+    if (!editFilm) return;
+
+    try {
+      await updateFilm(Number(editFilm.id), editForm);
+
+      toast.success("Film updated successfully");
+
+      setEditFilm(null);
+
+      fetchFilms();
+    } catch {
+      toast.error("Failed to update film");
     }
   };
 
   const containerVariants = {
     hidden: { opacity: 0 },
+
     visible: {
       opacity: 1,
-      transition: { staggerChildren: 0.05 },
+
+      transition: {
+        staggerChildren: 0.05,
+      },
     },
   };
 
   const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
+    hidden: {
+      opacity: 0,
+      y: 20,
+    },
+
     visible: {
       opacity: 1,
       y: 0,
+
       transition: {
         type: "spring" as const,
         stiffness: 300,
@@ -139,7 +219,12 @@ export default function Films() {
               />
             </div>
 
-            <Tabs value={statusFilter} onValueChange={(v) => setStatusFilter(v as typeof statusFilter)}>
+            <Tabs
+              value={statusFilter}
+              onValueChange={(v) =>
+                setStatusFilter(v as typeof statusFilter)
+              }
+            >
               <TabsList className="bg-background/50">
                 <TabsTrigger value="all">All</TabsTrigger>
                 <TabsTrigger value="pending">Pending</TabsTrigger>
@@ -182,9 +267,15 @@ export default function Films() {
 
                     <div className="p-5 space-y-4">
                       <div>
-                        <h3 className="text-xl font-semibold mb-2 line-clamp-1">{film.title}</h3>
+                        <h3 className="text-xl font-semibold mb-2 line-clamp-1">
+                          {film.title}
+                        </h3>
+
                         <div className="flex items-center gap-2 flex-wrap">
-                          <Badge variant="outline" className="text-xs">
+                          <Badge
+                            variant="outline"
+                            className="text-xs"
+                          >
                             {film.category}
                           </Badge>
                         </div>
@@ -193,15 +284,26 @@ export default function Films() {
                       <div className="space-y-2 text-sm text-muted-foreground font-jetbrains">
                         <div className="flex items-center justify-between">
                           <span>Uploader:</span>
-                          <span className="font-medium text-foreground">{film.uploader}</span>
+
+                          <span className="font-medium text-foreground">
+                            {film.uploader}
+                          </span>
                         </div>
+
                         <div className="flex items-center justify-between">
                           <span>Uploaded:</span>
-                          <span className="text-xs">{formatDate(film.uploadDate)}</span>
+
+                          <span className="text-xs">
+                            {formatDate(film.uploadDate)}
+                          </span>
                         </div>
+
                         <div className="flex items-center justify-between">
                           <span>Size:</span>
-                          <span className="text-xs">{formatBytes(film.size)}</span>
+
+                          <span className="text-xs">
+                            {formatBytes(film.size)}
+                          </span>
                         </div>
                       </div>
 
@@ -211,7 +313,9 @@ export default function Films() {
                             <NeonButton
                               variant="approve"
                               size="sm"
-                              onClick={() => handleApprove(film.id)}
+                              onClick={() =>
+                                handleApprove(film.id)
+                              }
                               className="flex-1"
                             >
                               Approve
@@ -220,7 +324,9 @@ export default function Films() {
                             <NeonButton
                               variant="reject"
                               size="sm"
-                              onClick={() => handleReject(film.id)}
+                              onClick={() =>
+                                handleReject(film.id)
+                              }
                               className="flex-1"
                             >
                               Reject
@@ -228,10 +334,27 @@ export default function Films() {
                           </>
                         )}
 
+                        {film.sourceType === "admin" && (
+                          <NeonButton
+                            variant="secondary"
+                            size="sm"
+                            onClick={() =>
+                              openEditDialog(film)
+                            }
+                          >
+                            Edit
+                          </NeonButton>
+                        )}
+
                         <NeonButton
                           variant="delete"
                           size="sm"
-                          onClick={() => setDeleteDialog({ open: true, filmId: film.id })}
+                          onClick={() =>
+                            setDeleteDialog({
+                              open: true,
+                              filmId: film.id,
+                            })
+                          }
                         >
                           Delete
                         </NeonButton>
@@ -244,12 +367,22 @@ export default function Films() {
           ) : (
             <motion.div
               key="empty"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
+              initial={{
+                opacity: 0,
+                y: 20,
+              }}
+              animate={{
+                opacity: 1,
+                y: 0,
+              }}
               className="glass-card rounded-xl p-12 text-center"
             >
               <FilmIcon className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
-              <h3 className="text-xl font-semibold mb-2">No films found</h3>
+
+              <h3 className="text-xl font-semibold mb-2">
+                No films found
+              </h3>
+
               <p className="text-muted-foreground">
                 {searchQuery
                   ? "Try adjusting your search query"
@@ -262,13 +395,97 @@ export default function Films() {
 
       <ConfirmDialog
         open={deleteDialog.open}
-        onClose={() => setDeleteDialog({ open: false, filmId: null })}
+        onClose={() =>
+          setDeleteDialog({
+            open: false,
+            filmId: null,
+          })
+        }
         onConfirm={handleDelete}
         title="Delete Film"
         description="Are you sure you want to permanently delete this film? This action cannot be undone."
         confirmLabel="Delete"
         variant="destructive"
       />
+
+      {editFilm && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+          <div className="glass-card p-6 rounded-xl w-full max-w-md space-y-4">
+            <h2 className="text-2xl font-bold">
+              Edit Film
+            </h2>
+
+            <input
+              type="text"
+              placeholder="Title"
+              value={editForm.title}
+              onChange={(e) =>
+                setEditForm({
+                  ...editForm,
+                  title: e.target.value,
+                })
+              }
+              className="w-full p-3 rounded-lg bg-background border border-border"
+            />
+
+            <input
+              type="text"
+              placeholder="Category"
+              value={editForm.category}
+              onChange={(e) =>
+                setEditForm({
+                  ...editForm,
+                  category: e.target.value,
+                })
+              }
+              className="w-full p-3 rounded-lg bg-background border border-border"
+            />
+
+            <textarea
+              placeholder="Description"
+              value={editForm.description}
+              onChange={(e) =>
+                setEditForm({
+                  ...editForm,
+                  description: e.target.value,
+                })
+              }
+              className="w-full p-3 rounded-lg bg-background border border-border min-h-[100px]"
+            />
+
+            <input
+              type="number"
+              placeholder="Price"
+              value={editForm.price}
+              onChange={(e) =>
+                setEditForm({
+                  ...editForm,
+                  price: Number(e.target.value),
+                })
+              }
+              className="w-full p-3 rounded-lg bg-background border border-border"
+            />
+
+            <div className="flex gap-3">
+              <NeonButton
+                variant="approve"
+                className="flex-1"
+                onClick={handleUpdateFilm}
+              >
+                Save
+              </NeonButton>
+
+              <NeonButton
+                variant="reject"
+                className="flex-1"
+                onClick={() => setEditFilm(null)}
+              >
+                Cancel
+              </NeonButton>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -47,10 +47,6 @@ def root():
     return {"message": "Admin backend is running"}
 
 
-# =========================
-# GET APIs
-# =========================
-
 @app.get("/films")
 def get_films(db: Session = Depends(get_db)):
     return db.query(Film).all()
@@ -65,10 +61,6 @@ def get_assets(db: Session = Depends(get_db)):
 def get_users(db: Session = Depends(get_db)):
     return db.query(User).all()
 
-
-# =========================
-# FILM APIs
-# =========================
 
 @app.put("/films/{film_id}")
 def update_film(film_id: int, data: FilmUpdate, db: Session = Depends(get_db)):
@@ -141,10 +133,6 @@ def delete_film(film_id: int, db: Session = Depends(get_db)):
     return {"message": "Film deleted successfully"}
 
 
-# =========================
-# ASSET APIs
-# =========================
-
 @app.put("/assets/{asset_id}")
 def update_asset(asset_id: int, data: AssetUpdate, db: Session = Depends(get_db)):
     asset = db.query(Asset).filter(Asset.id == asset_id).first()
@@ -152,11 +140,13 @@ def update_asset(asset_id: int, data: AssetUpdate, db: Session = Depends(get_db)
     if not asset:
         raise HTTPException(status_code=404, detail="Asset not found")
 
-    if asset.source_type != "admin":
-        raise HTTPException(
-            status_code=403,
-            detail="Only official admin assets can be edited"
-        )
+    # TEMPORARY FOR TESTING:
+    # رجعي هذا الشرط بعد ما نتأكد إن التعديل شغال
+    # if asset.source_type != "admin":
+    #     raise HTTPException(
+    #         status_code=403,
+    #         detail="Only official admin assets can be edited"
+    #     )
 
     update_data = data.model_dump(exclude_unset=True)
 

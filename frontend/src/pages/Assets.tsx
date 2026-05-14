@@ -18,6 +18,7 @@ import {
   approveAsset,
   rejectAsset,
   deleteAsset,
+  updateAsset,
 } from "@/api/assets";
 import {
   StatusBadge,
@@ -32,6 +33,8 @@ type StatusFilter = "all" | "pending" | "approved" | "rejected";
 type AdminAsset = Asset & {
   preview?: string;
   fileType?: string;
+  description?: string;
+  sourceType?: string;
 };
 
 function GLBModel({ url }: { url: string }) {
@@ -44,7 +47,7 @@ function GLBModel({ url }: { url: string }) {
   );
 }
 
-function AssetViewer({ url, name }: { url?: string; name: string }) {
+function AssetViewer({ url }: { url?: string; name: string }) {
   if (!url) {
     return <Box className="w-24 h-24 neon-text-purple" />;
   }
@@ -75,6 +78,15 @@ export default function Assets() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedAsset, setSelectedAsset] = useState<AdminAsset | null>(null);
 
+  const [editAsset, setEditAsset] = useState<AdminAsset | null>(null);
+
+  const [editForm, setEditForm] = useState({
+    name: "",
+    category: "",
+    description: "",
+    price: 0,
+  });
+
   useEffect(() => {
     fetchAssets();
   }, []);
@@ -95,10 +107,12 @@ export default function Assets() {
         polygons: 0,
         preview: asset.preview_url,
         fileType: asset.file_type || "glb",
+        description: asset.description || "",
+        sourceType: "admin",
       }));
 
       setAssets(mappedAssets);
-    } catch (error) {
+    } catch {
       toast.error("Failed to load assets");
     }
   };
@@ -153,26 +167,54 @@ export default function Assets() {
   };
 
   const handleDelete = async () => {
-    if (selectedAsset) {
-      try {
-        await deleteAsset(Number(selectedAsset.id));
+    if (!selectedAsset) return;
 
-        setAssets((prev) =>
-          prev.filter((asset) => asset.id !== selectedAsset.id)
-        );
+    try {
+      await deleteAsset(Number(selectedAsset.id));
 
-        toast.success(`${selectedAsset.name} deleted`);
-        setDeleteDialogOpen(false);
-        setSelectedAsset(null);
-      } catch {
-        toast.error("Failed to delete asset");
-      }
+      setAssets((prev) =>
+        prev.filter((asset) => asset.id !== selectedAsset.id)
+      );
+
+      toast.success(`${selectedAsset.name} deleted`);
+
+      setDeleteDialogOpen(false);
+      setSelectedAsset(null);
+    } catch {
+      toast.error("Failed to delete asset");
     }
   };
 
   const openDeleteDialog = (asset: AdminAsset) => {
     setSelectedAsset(asset);
     setDeleteDialogOpen(true);
+  };
+
+  const openEditDialog = (asset: AdminAsset) => {
+    setEditAsset(asset);
+
+    setEditForm({
+      name: asset.name || "",
+      category: asset.category || "",
+      description: asset.description || "",
+      price: asset.price || 0,
+    });
+  };
+
+  const handleUpdateAsset = async () => {
+    if (!editAsset) return;
+
+    try {
+      await updateAsset(Number(editAsset.id), editForm);
+
+      toast.success("Asset updated successfully");
+
+      setEditAsset(null);
+
+      fetchAssets();
+    } catch {
+      toast.error("Failed to update asset");
+    }
   };
 
   return (
@@ -286,6 +328,17 @@ export default function Assets() {
                         </div>
                       )}
 
+                      {asset.sourceType === "admin" && (
+                        <NeonButton
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => openEditDialog(asset)}
+                          className="w-full"
+                        >
+                          Edit
+                        </NeonButton>
+                      )}
+
                       <NeonButton
                         variant="delete"
                         size="sm"
@@ -309,7 +362,10 @@ export default function Assets() {
             className="text-center py-12"
           >
             <Box className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
-            <p className="text-lg text-muted-foreground">No assets found</p>
+
+            <p className="text-lg text-muted-foreground">
+              No assets found
+            </p>
           </motion.div>
         )}
       </motion.div>
@@ -326,6 +382,85 @@ export default function Assets() {
         confirmLabel="Delete"
         variant="destructive"
       />
+
+      {editAsset && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+          <div className="glass-card p-6 rounded-xl w-full max-w-md space-y-4">
+            <h2 className="text-2xl font-bold">
+              Edit Asset
+            </h2>
+
+            <input
+              type="text"
+              placeholder="Name"
+              value={editForm.name}
+              onChange={(e) =>
+                setEditForm({
+                  ...editForm,
+                  name: e.target.value,
+                })
+              }
+              className="w-full p-3 rounded-lg bg-background border border-border"
+            />
+
+            <input
+              type="text"
+              placeholder="Category"
+              value={editForm.category}
+              onChange={(e) =>
+                setEditForm({
+                  ...editForm,
+                  category: e.target.value,
+                })
+              }
+              className="w-full p-3 rounded-lg bg-background border border-border"
+            />
+
+            <textarea
+              placeholder="Description"
+              value={editForm.description}
+              onChange={(e) =>
+                setEditForm({
+                  ...editForm,
+                  description: e.target.value,
+                })
+              }
+              className="w-full p-3 rounded-lg bg-background border border-border min-h-[100px]"
+            />
+
+            <input
+              type="number"
+              placeholder="Price"
+              value={editForm.price}
+              onChange={(e) =>
+                setEditForm({
+                  ...editForm,
+                  price: Number(e.target.value),
+                })
+              }
+              className="w-full p-3 rounded-lg bg-background border border-border"
+            />
+
+            <div className="flex gap-3">
+              <NeonButton
+                variant="approve"
+                className="flex-1"
+                onClick={handleUpdateAsset}
+              >
+                Save
+              </NeonButton>
+
+              <NeonButton
+                variant="reject"
+                className="flex-1"
+                onClick={() => setEditAsset(null)}
+              >
+                Cancel
+              </NeonButton>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

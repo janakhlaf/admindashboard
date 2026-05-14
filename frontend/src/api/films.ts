@@ -11,12 +11,9 @@ export const getFilms = async () => {
 };
 
 export const approveFilm = async (filmId: number) => {
-  const response = await fetch(
-    `${API_URL}/films/${filmId}/approve`,
-    {
-      method: "PATCH",
-    }
-  );
+  const response = await fetch(`${API_URL}/films/${filmId}/approve`, {
+    method: "PATCH",
+  });
 
   if (!response.ok) {
     throw new Error("Failed to approve film");
@@ -26,12 +23,9 @@ export const approveFilm = async (filmId: number) => {
 };
 
 export const rejectFilm = async (filmId: number) => {
-  const response = await fetch(
-    `${API_URL}/films/${filmId}/reject`,
-    {
-      method: "PATCH",
-    }
-  );
+  const response = await fetch(`${API_URL}/films/${filmId}/reject`, {
+    method: "PATCH",
+  });
 
   if (!response.ok) {
     throw new Error("Failed to reject film");
@@ -41,12 +35,9 @@ export const rejectFilm = async (filmId: number) => {
 };
 
 export const deleteFilm = async (filmId: number) => {
-  const response = await fetch(
-    `${API_URL}/films/${filmId}`,
-    {
-      method: "DELETE",
-    }
-  );
+  const response = await fetch(`${API_URL}/films/${filmId}`, {
+    method: "DELETE",
+  });
 
   if (!response.ok) {
     throw new Error("Failed to delete film");
@@ -57,18 +48,20 @@ export const deleteFilm = async (filmId: number) => {
 
 export const updateFilm = async (
   filmId: number,
-  data: any
+  data: {
+    title: string;
+    category: string;
+    description: string;
+    price: number;
+  }
 ) => {
-  const response = await fetch(
-    `${API_URL}/films/${filmId}`,
-    {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(data),
-    }
-  );
+  const response = await fetch(`${API_URL}/films/${filmId}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(data),
+  });
 
   if (!response.ok) {
     throw new Error("Failed to update film");

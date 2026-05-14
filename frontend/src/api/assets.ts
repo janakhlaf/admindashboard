@@ -11,12 +11,9 @@ export const getAssets = async () => {
 };
 
 export const approveAsset = async (assetId: number) => {
-  const response = await fetch(
-    `${API_URL}/assets/${assetId}/approve`,
-    {
-      method: "PATCH",
-    }
-  );
+  const response = await fetch(`${API_URL}/assets/${assetId}/approve`, {
+    method: "PATCH",
+  });
 
   if (!response.ok) {
     throw new Error("Failed to approve asset");
@@ -26,12 +23,9 @@ export const approveAsset = async (assetId: number) => {
 };
 
 export const rejectAsset = async (assetId: number) => {
-  const response = await fetch(
-    `${API_URL}/assets/${assetId}/reject`,
-    {
-      method: "PATCH",
-    }
-  );
+  const response = await fetch(`${API_URL}/assets/${assetId}/reject`, {
+    method: "PATCH",
+  });
 
   if (!response.ok) {
     throw new Error("Failed to reject asset");
@@ -41,12 +35,9 @@ export const rejectAsset = async (assetId: number) => {
 };
 
 export const deleteAsset = async (assetId: number) => {
-  const response = await fetch(
-    `${API_URL}/assets/${assetId}`,
-    {
-      method: "DELETE",
-    }
-  );
+  const response = await fetch(`${API_URL}/assets/${assetId}`, {
+    method: "DELETE",
+  });
 
   if (!response.ok) {
     throw new Error("Failed to delete asset");
@@ -57,18 +48,20 @@ export const deleteAsset = async (assetId: number) => {
 
 export const updateAsset = async (
   assetId: number,
-  data: any
+  data: {
+    name: string;
+    category: string;
+    description: string;
+    price: number;
+  }
 ) => {
-  const response = await fetch(
-    `${API_URL}/assets/${assetId}`,
-    {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(data),
-    }
-  );
+  const response = await fetch(`${API_URL}/assets/${assetId}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(data),
+  });
 
   if (!response.ok) {
     throw new Error("Failed to update asset");
