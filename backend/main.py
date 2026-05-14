@@ -59,7 +59,17 @@ def get_assets(db: Session = Depends(get_db)):
 
 @app.get("/users")
 def get_users(db: Session = Depends(get_db)):
-    return db.query(User).all()
+    users = db.query(User).all()
+
+    return [
+        {
+            "id": user.id,
+            "name": getattr(user, "name", None) or getattr(user, "username", None) or f"User {user.id}",
+            "email": getattr(user, "email", "") or "",
+            "avatar_url": getattr(user, "avatar_url", "") or "",
+        }
+        for user in users
+    ]
 
 
 @app.put("/films/{film_id}")
@@ -140,8 +150,7 @@ def update_asset(asset_id: int, data: AssetUpdate, db: Session = Depends(get_db)
     if not asset:
         raise HTTPException(status_code=404, detail="Asset not found")
 
-    # TEMPORARY FOR TESTING:
-    # رجعي هذا الشرط بعد ما نتأكد إن التعديل شغال
+    # TEMPORARY FOR TESTING
     # if asset.source_type != "admin":
     #     raise HTTPException(
     #         status_code=403,
