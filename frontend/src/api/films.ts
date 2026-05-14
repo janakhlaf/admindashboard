@@ -54,3 +54,25 @@ export const deleteFilm = async (filmId: number) => {
 
   return response.json();
 };
+
+export const updateFilm = async (
+  filmId: number,
+  data: any
+) => {
+  const response = await fetch(
+    `${API_URL}/films/${filmId}`,
+    {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error("Failed to update film");
+  }
+
+  return response.json();
+};
