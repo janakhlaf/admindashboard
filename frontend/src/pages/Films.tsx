@@ -31,15 +31,11 @@ export default function Films() {
   const [statusFilter, setStatusFilter] = useState<
     "all" | "pending" | "approved" | "rejected"
   >("all");
-
   const [searchQuery, setSearchQuery] = useState("");
 
-  const [deleteDialog, setDeleteDialog] = useState<{
-    open: boolean;
-    filmId: string | null;
-  }>({
+  const [deleteDialog, setDeleteDialog] = useState({
     open: false,
-    filmId: null,
+    filmId: null as string | null,
   });
 
   const [editFilm, setEditFilm] = useState<AdminFilm | null>(null);
@@ -59,19 +55,23 @@ export default function Films() {
     try {
       const data = await getFilms();
 
-      const mappedFilms = data.map((film: any) => ({
-        id: String(film.id),
-        title: film.title,
-        category: film.category,
-        uploader: `User ${film.user_id}`,
-        uploadDate: new Date().toISOString(),
-        size: Number(film.file_size) || 0,
-        status: film.status,
-        thumbnail: film.thumbnail_url || film.thumbnail_basic,
-        description: film.description || "",
-        price: Number(film.price) || 0,
-        sourceType: film.source_type,
-      }));
+      const mappedFilms: AdminFilm[] = data.map((film: any) => {
+        const isAdminFilm = film.source_type === "admin";
+
+        return {
+          id: String(film.id),
+          title: film.title || "Untitled Film",
+          category: film.category || "Uncategorized",
+          uploader: isAdminFilm ? "Admin" : `User ${film.user_id ?? ""}`,
+          uploadDate: new Date().toISOString(),
+          size: Number(film.file_size) || 0,
+          status: film.status || "pending",
+          thumbnail: film.thumbnail_url || film.thumbnail_basic || "",
+          description: film.description || "",
+          price: Number(film.price) || 0,
+          sourceType: film.source_type || "user",
+        };
+      });
 
       setFilms(mappedFilms);
     } catch {
@@ -96,9 +96,7 @@ export default function Films() {
 
       setFilms((prev) =>
         prev.map((film) =>
-          film.id === filmId
-            ? { ...film, status: "approved" as const }
-            : film
+          film.id === filmId ? { ...film, status: "approved" as const } : film
         )
       );
 
@@ -114,9 +112,7 @@ export default function Films() {
 
       setFilms((prev) =>
         prev.map((film) =>
-          film.id === filmId
-            ? { ...film, status: "rejected" as const }
-            : film
+          film.id === filmId ? { ...film, status: "rejected" as const } : film
         )
       );
 
@@ -167,7 +163,6 @@ export default function Films() {
       toast.success("Film updated successfully");
 
       setEditFilm(null);
-
       fetchFilms();
     } catch {
       toast.error("Failed to update film");
@@ -176,10 +171,8 @@ export default function Films() {
 
   const containerVariants = {
     hidden: { opacity: 0 },
-
     visible: {
       opacity: 1,
-
       transition: {
         staggerChildren: 0.05,
       },
@@ -191,11 +184,9 @@ export default function Films() {
       opacity: 0,
       y: 20,
     },
-
     visible: {
       opacity: 1,
       y: 0,
-
       transition: {
         type: "spring" as const,
         stiffness: 300,
@@ -221,9 +212,7 @@ export default function Films() {
 
             <Tabs
               value={statusFilter}
-              onValueChange={(v) =>
-                setStatusFilter(v as typeof statusFilter)
-              }
+              onValueChange={(v) => setStatusFilter(v as typeof statusFilter)}
             >
               <TabsList className="bg-background/50">
                 <TabsTrigger value="all">All</TabsTrigger>
@@ -272,10 +261,7 @@ export default function Films() {
                         </h3>
 
                         <div className="flex items-center gap-2 flex-wrap">
-                          <Badge
-                            variant="outline"
-                            className="text-xs"
-                          >
+                          <Badge variant="outline" className="text-xs">
                             {film.category}
                           </Badge>
                         </div>
@@ -284,15 +270,20 @@ export default function Films() {
                       <div className="space-y-2 text-sm text-muted-foreground font-jetbrains">
                         <div className="flex items-center justify-between">
                           <span>Uploader:</span>
-
                           <span className="font-medium text-foreground">
                             {film.uploader}
                           </span>
                         </div>
 
                         <div className="flex items-center justify-between">
-                          <span>Uploaded:</span>
+                          <span>Source:</span>
+                          <span className="font-medium text-foreground">
+                            {film.sourceType}
+                          </span>
+                        </div>
 
+                        <div className="flex items-center justify-between">
+                          <span>Uploaded:</span>
                           <span className="text-xs">
                             {formatDate(film.uploadDate)}
                           </span>
@@ -300,7 +291,6 @@ export default function Films() {
 
                         <div className="flex items-center justify-between">
                           <span>Size:</span>
-
                           <span className="text-xs">
                             {formatBytes(film.size)}
                           </span>
@@ -313,9 +303,7 @@ export default function Films() {
                             <NeonButton
                               variant="approve"
                               size="sm"
-                              onClick={() =>
-                                handleApprove(film.id)
-                              }
+                              onClick={() => handleApprove(film.id)}
                               className="flex-1"
                             >
                               Approve
@@ -324,9 +312,7 @@ export default function Films() {
                             <NeonButton
                               variant="reject"
                               size="sm"
-                              onClick={() =>
-                                handleReject(film.id)
-                              }
+                              onClick={() => handleReject(film.id)}
                               className="flex-1"
                             >
                               Reject
@@ -338,9 +324,7 @@ export default function Films() {
                           <NeonButton
                             variant="secondary"
                             size="sm"
-                            onClick={() =>
-                              openEditDialog(film)
-                            }
+                            onClick={() => openEditDialog(film)}
                           >
                             Edit
                           </NeonButton>
@@ -379,9 +363,7 @@ export default function Films() {
             >
               <FilmIcon className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
 
-              <h3 className="text-xl font-semibold mb-2">
-                No films found
-              </h3>
+              <h3 className="text-xl font-semibold mb-2">No films found</h3>
 
               <p className="text-muted-foreground">
                 {searchQuery
@@ -411,9 +393,7 @@ export default function Films() {
       {editFilm && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
           <div className="glass-card p-6 rounded-xl w-full max-w-md space-y-4">
-            <h2 className="text-2xl font-bold">
-              Edit Film
-            </h2>
+            <h2 className="text-2xl font-bold">Edit Film</h2>
 
             <input
               type="text"

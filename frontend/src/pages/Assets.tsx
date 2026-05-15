@@ -95,21 +95,25 @@ export default function Assets() {
     try {
       const data = await getAssets();
 
-      const mappedAssets: AdminAsset[] = data.map((asset: any) => ({
-        id: String(asset.id),
-        name: asset.name,
-        category: asset.category || "Uncategorized",
-        price: Number(asset.price) || 0,
-        status: asset.status,
-        uploader: `User ${asset.user_id}`,
-        uploadDate: new Date().toISOString(),
-        fileSize: Number(asset.file_size) || 0,
-        polygons: 0,
-        preview: asset.preview_url,
-        fileType: asset.file_type || "glb",
-        description: asset.description || "",
-        sourceType: "admin",
-      }));
+      const mappedAssets: AdminAsset[] = data.map((asset: any) => {
+        const isAdminAsset = asset.source_type === "admin";
+
+        return {
+          id: String(asset.id),
+          name: asset.name || "Untitled Asset",
+          category: asset.category || "Uncategorized",
+          price: Number(asset.price) || 0,
+          status: asset.status || "pending",
+          uploader: isAdminAsset ? "Admin" : `User ${asset.user_id ?? ""}`,
+          uploadDate: new Date().toISOString(),
+          fileSize: Number(asset.file_size) || 0,
+          polygons: 0,
+          preview: asset.preview_url || "",
+          fileType: asset.file_type || "file",
+          description: asset.description || "",
+          sourceType: asset.source_type || "user",
+        };
+      });
 
       setAssets(mappedAssets);
     } catch {
@@ -301,7 +305,8 @@ export default function Assets() {
                     </div>
 
                     <div className="text-xs text-muted-foreground mb-4 font-jetbrains">
-                      <div>{asset.uploader}</div>
+                      <div>Uploader: {asset.uploader}</div>
+                      <div>Source: {asset.sourceType}</div>
                       <div>{formatDate(asset.uploadDate)}</div>
                     </div>
 
@@ -363,9 +368,7 @@ export default function Assets() {
           >
             <Box className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
 
-            <p className="text-lg text-muted-foreground">
-              No assets found
-            </p>
+            <p className="text-lg text-muted-foreground">No assets found</p>
           </motion.div>
         )}
       </motion.div>
@@ -386,9 +389,7 @@ export default function Assets() {
       {editAsset && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
           <div className="glass-card p-6 rounded-xl w-full max-w-md space-y-4">
-            <h2 className="text-2xl font-bold">
-              Edit Asset
-            </h2>
+            <h2 className="text-2xl font-bold">Edit Asset</h2>
 
             <input
               type="text"

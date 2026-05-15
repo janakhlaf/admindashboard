@@ -6,6 +6,8 @@ import {
   Film,
   Box,
   Zap,
+  Upload,
+  Clapperboard,
 } from "lucide-react";
 import { cn, ROUTE_PATHS } from "@/lib/index";
 
@@ -14,6 +16,8 @@ const navItems = [
   { path: ROUTE_PATHS.USERS, icon: Users },
   { path: ROUTE_PATHS.FILMS, icon: Film },
   { path: ROUTE_PATHS.ASSETS, icon: Box },
+  { path: "/upload-asset", icon: Upload },
+  { path: "/upload-film", icon: Clapperboard },
 ];
 
 const NexusLayout = () => {
@@ -32,9 +36,7 @@ const NexusLayout = () => {
         }}
       />
 
-      <aside
-        className="fixed left-0 top-0 h-screen w-16 z-50 bg-card/80 backdrop-blur-xl border-r border-border/40"
-      >
+      <aside className="fixed left-0 top-0 h-screen w-16 z-50 bg-card/80 backdrop-blur-xl border-r border-border/40">
         <div className="flex flex-col h-full">
           <div className="h-20 flex items-center justify-center">
             <div
@@ -69,15 +71,15 @@ const NexusLayout = () => {
                     {isActive && (
                       <div
                         className="absolute left-0 top-0 bottom-0 w-[3px] rounded-r-full"
-                        style={{
-                          background: "oklch(0.70 0.25 275)",
-                        }}
+                        style={{ background: "oklch(0.70 0.25 275)" }}
                       />
                     )}
+
                     <div
                       className={cn(
                         "transition-all duration-200",
-                        !isActive && "hover:drop-shadow-[0_0_8px_oklch(0.7_0.25_270_/_0.4)]"
+                        !isActive &&
+                          "hover:drop-shadow-[0_0_8px_oklch(0.7_0.25_270_/_0.4)]"
                       )}
                     >
                       <item.icon className="w-5 h-5" />
@@ -89,7 +91,9 @@ const NexusLayout = () => {
           </nav>
 
           <div className="p-4 border-t border-border/40">
-            <p className="text-xs text-muted-foreground text-center font-mono">v2</p>
+            <p className="text-xs text-muted-foreground text-center font-mono">
+              v2
+            </p>
           </div>
         </div>
       </aside>

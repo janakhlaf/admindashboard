@@ -42,6 +42,29 @@ class AssetUpdate(BaseModel):
     file_size: Optional[int] = None
 
 
+class AdminAssetCreate(BaseModel):
+    name: str
+    description: Optional[str] = None
+    category: Optional[str] = None
+    price: Optional[float] = 0
+    preview_url: Optional[str] = None
+    bucket_path: Optional[str] = None
+    file_type: Optional[str] = None
+    file_size: Optional[int] = None
+
+
+class AdminFilmCreate(BaseModel):
+    title: str
+    description: Optional[str] = None
+    category: Optional[str] = None
+    price: Optional[float] = 0
+    thumbnail_url: Optional[str] = None
+    bucket_path: Optional[str] = None
+    duration: Optional[str] = None
+    file_size: Optional[str] = None
+    mime_type: Optional[str] = None
+
+
 @app.get("/")
 def root():
     return {"message": "Admin backend is running"}
@@ -64,12 +87,71 @@ def get_users(db: Session = Depends(get_db)):
     return [
         {
             "id": user.id,
-            "name": getattr(user, "name", None) or getattr(user, "username", None) or f"User {user.id}",
+            "name": getattr(user, "full_name", None)
+            or getattr(user, "name", None)
+            or getattr(user, "username", None)
+            or f"User {user.id}",
             "email": getattr(user, "email", "") or "",
             "avatar_url": getattr(user, "avatar_url", "") or "",
         }
         for user in users
     ]
+
+
+@app.post("/admin/assets/upload")
+def admin_upload_asset(data: AdminAssetCreate, db: Session = Depends(get_db)):
+    new_asset = Asset(
+        user_id=None,
+        name=data.name,
+        description=data.description,
+        category=data.category,
+        preview_url=data.preview_url,
+        bucket_path=data.bucket_path,
+        file_type=data.file_type,
+        file_size=data.file_size,
+        price=data.price,
+        source_type="admin",
+        status="approved",
+        rejection_reason=None,
+    )
+
+    db.add(new_asset)
+    db.commit()
+    db.refresh(new_asset)
+
+    return {
+        "message": "Admin asset uploaded and approved successfully",
+        "asset": new_asset,
+    }
+
+
+@app.post("/admin/films/upload")
+def admin_upload_film(data: AdminFilmCreate, db: Session = Depends(get_db)):
+    new_film = Film(
+        user_id=None,
+        title=data.title,
+        description=data.description,
+        category=data.category,
+        thumbnail_url=data.thumbnail_url,
+        bucket_path=data.bucket_path,
+        mime_type=data.mime_type,
+        price=data.price,
+        source_type="admin",
+        status="approved",
+        rejection_reason=None,
+        duration=data.duration,
+        file_size=data.file_size,
+        thumbnail_basic=data.thumbnail_url,
+    )
+
+    db.add(new_film)
+    db.commit()
+    db.refresh(new_film)
+
+    return {
+        "message": "Admin film uploaded and approved successfully",
+        "film": new_film,
+    }
 
 
 @app.put("/films/{film_id}")
@@ -149,13 +231,6 @@ def update_asset(asset_id: int, data: AssetUpdate, db: Session = Depends(get_db)
 
     if not asset:
         raise HTTPException(status_code=404, detail="Asset not found")
-
-    # TEMPORARY FOR TESTING
-    # if asset.source_type != "admin":
-    #     raise HTTPException(
-    #         status_code=403,
-    #         detail="Only official admin assets can be edited"
-    #     )
 
     update_data = data.model_dump(exclude_unset=True)
 
