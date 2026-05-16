@@ -62,9 +62,9 @@ function AssetViewer({ url }: { url?: string; name: string }) {
       </Suspense>
 
       <OrbitControls
-        enableZoom={false}
+        enableZoom={true}
         enablePan={false}
-        autoRotate
+      
         autoRotateSpeed={1.5}
       />
     </Canvas>
