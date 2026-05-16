@@ -151,21 +151,31 @@ const UploadFilm = () => {
               Thumbnail
             </label>
 
-            <div className="border-2 border-dashed border-cyan-500/20 rounded-2xl p-6 text-center bg-black/30">
-              <input
-                type="file"
-                onChange={(e) =>
-                  setThumbnail(e.target.files?.[0] || null)
-                }
-                className="text-sm text-gray-400"
-              />
+            <button
+              type="button"
+              onClick={() =>
+                document.getElementById("thumbnail-upload")?.click()
+              }
+              className="w-full rounded-2xl border-2 border-dashed border-cyan-500/20 bg-black/30 p-10 text-center hover:border-cyan-400 transition-all duration-300"
+            >
+              <p className="text-white font-medium">
+                {thumbnail ? thumbnail.name : "Choose Thumbnail Image"}
+              </p>
 
-              {thumbnail && (
-                <p className="mt-3 text-sm text-gray-400">
-                  Selected: {thumbnail.name}
-                </p>
-              )}
-            </div>
+              <p className="text-sm text-gray-400 mt-2">
+                PNG, JPG, WEBP
+              </p>
+            </button>
+
+            <input
+              id="thumbnail-upload"
+              type="file"
+              accept="image/*"
+              onChange={(e) =>
+                setThumbnail(e.target.files?.[0] || null)
+              }
+              className="hidden"
+            />
           </div>
 
           {/* Film File */}
@@ -174,21 +184,31 @@ const UploadFilm = () => {
               Film File
             </label>
 
-            <div className="border-2 border-dashed border-cyan-500/20 rounded-2xl p-10 text-center bg-black/30">
-              <input
-                type="file"
-                onChange={(e) =>
-                  setFilmFile(e.target.files?.[0] || null)
-                }
-                className="text-sm text-gray-400"
-              />
+            <button
+              type="button"
+              onClick={() =>
+                document.getElementById("film-upload")?.click()
+              }
+              className="w-full rounded-2xl border-2 border-dashed border-cyan-500/20 bg-black/30 p-10 text-center hover:border-cyan-400 transition-all duration-300"
+            >
+              <p className="text-white font-medium">
+                {filmFile ? filmFile.name : "Choose Film File"}
+              </p>
 
-              {filmFile && (
-                <p className="mt-3 text-sm text-gray-400">
-                  Selected: {filmFile.name}
-                </p>
-              )}
-            </div>
+              <p className="text-sm text-gray-400 mt-2">
+                MP4, MOV, AVI
+              </p>
+            </button>
+
+            <input
+              id="film-upload"
+              type="file"
+              accept="video/*"
+              onChange={(e) =>
+                setFilmFile(e.target.files?.[0] || null)
+              }
+              className="hidden"
+            />
           </div>
 
           {/* Message */}

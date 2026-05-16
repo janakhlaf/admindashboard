@@ -63,10 +63,17 @@ export default function Films() {
           title: film.title || "Untitled Film",
           category: film.category || "Uncategorized",
           uploader: isAdminFilm ? "Admin" : `User ${film.user_id ?? ""}`,
-          uploadDate: new Date().toISOString(),
+          uploadDate:
+            film.created_at ||
+            film.upload_date ||
+            new Date().toISOString(),
           size: Number(film.file_size) || 0,
           status: film.status || "pending",
-          thumbnail: film.thumbnail_url || film.thumbnail_basic || "",
+          thumbnail:
+            film.posterUrl ||
+            film.poster_url ||
+            film.thumbnail_url ||
+            "",
           description: film.description || "",
           price: Number(film.price) || 0,
           sourceType: film.source_type || "user",
@@ -116,7 +123,7 @@ export default function Films() {
         )
       );
 
-      toast.error("Film rejected");
+      toast.success("Film rejected successfully");
     } catch {
       toast.error("Failed to reject film");
     }
@@ -231,17 +238,17 @@ export default function Films() {
               variants={containerVariants}
               initial="hidden"
               animate="visible"
-              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6"
             >
               {filteredFilms.map((film) => (
                 <motion.div key={film.id} variants={itemVariants}>
                   <div className="glass-card rounded-xl overflow-hidden group hover:neon-border-purple transition-all duration-300">
-                    <div className="aspect-video relative overflow-hidden bg-gradient-to-br from-primary/20 via-accent/20 to-primary/20">
+                    <div className="aspect-[6/9] relative overflow-hidden bg-black">
                       {film.thumbnail ? (
                         <img
                           src={film.thumbnail}
                           alt={film.title}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center">
