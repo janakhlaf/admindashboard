@@ -16,7 +16,7 @@ class User(Base):
 class Film(Base):
     __tablename__ = "films"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     user_id = Column(Integer, ForeignKey("users.id"))
     title = Column(String)
     description = Column(Text)
