@@ -3,9 +3,11 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Box } from "lucide-react";
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls, useGLTF, Center } from "@react-three/drei";
+import { Box3, Vector3 } from "three";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+
 import {
   Asset,
   formatDate,
@@ -13,6 +15,7 @@ import {
   formatCurrency,
   cn,
 } from "@/lib/index";
+
 import {
   getAssets,
   approveAsset,
@@ -20,12 +23,14 @@ import {
   deleteAsset,
   updateAsset,
 } from "@/api/assets";
+
 import {
   StatusBadge,
   NeonButton,
   PageHeader,
   SearchInput,
 } from "@/components/NexusUI";
+
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 
 type StatusFilter = "all" | "pending" | "approved" | "rejected";
@@ -40,11 +45,27 @@ type AdminAsset = Asset & {
 function GLBModel({ url }: { url: string }) {
   const gltf = useGLTF(url);
 
-  return (
-    <Center>
-      <primitive object={gltf.scene} scale={1.6} />
-    </Center>
-  );
+  const model = useMemo(() => {
+    const clonedScene = gltf.scene.clone(true);
+
+    const box = new Box3().setFromObject(clonedScene);
+    const size = new Vector3();
+    const center = new Vector3();
+
+    box.getSize(size);
+    box.getCenter(center);
+
+    clonedScene.position.sub(center);
+
+    const maxSize = Math.max(size.x, size.y, size.z);
+    const scale = maxSize > 0 ? 2 / maxSize : 1;
+
+    clonedScene.scale.setScalar(scale);
+
+    return clonedScene;
+  }, [gltf.scene]);
+
+  return <primitive object={model} />;
 }
 
 function AssetViewer({ url }: { url?: string; name: string }) {
@@ -53,18 +74,29 @@ function AssetViewer({ url }: { url?: string; name: string }) {
   }
 
   return (
-    <Canvas camera={{ position: [0, 1.2, 4], fov: 45 }}>
-      <ambientLight intensity={1.5} />
-      <directionalLight position={[3, 3, 3]} intensity={2} />
+    <Canvas
+      camera={{
+        position: [0, 0, 4],
+        fov: 45,
+      }}
+      gl={{
+        preserveDrawingBuffer: true,
+      }}
+    >
+      <ambientLight intensity={2} />
+      <directionalLight position={[5, 5, 5]} intensity={2.5} />
+      <directionalLight position={[-5, -3, -5]} intensity={1} />
 
       <Suspense fallback={null}>
-        <GLBModel url={url} />
+        <Center>
+          <GLBModel url={url} />
+        </Center>
       </Suspense>
 
       <OrbitControls
         enableZoom={true}
         enablePan={false}
-      
+        autoRotate
         autoRotateSpeed={1.5}
       />
     </Canvas>
@@ -77,7 +109,6 @@ export default function Assets() {
   const [searchQuery, setSearchQuery] = useState("");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedAsset, setSelectedAsset] = useState<AdminAsset | null>(null);
-
   const [editAsset, setEditAsset] = useState<AdminAsset | null>(null);
 
   const [editForm, setEditForm] = useState({
@@ -96,7 +127,7 @@ export default function Assets() {
       const data = await getAssets();
 
       const mappedAssets: AdminAsset[] = data.map((asset: any) => {
-        const isAdminAsset = asset.source_type === "admin";
+        const isAdminAsset = asset.source_type === "admin_upload";
 
         return {
           id: String(asset.id),
@@ -111,7 +142,7 @@ export default function Assets() {
           preview: asset.preview_url || "",
           fileType: asset.file_type || "file",
           description: asset.description || "",
-          sourceType: asset.source_type || "user",
+          sourceType: isAdminAsset ? "Admin Upload" : "User Upload",
         };
       });
 
@@ -181,7 +212,6 @@ export default function Assets() {
       );
 
       toast.success(`${selectedAsset.name} deleted`);
-
       setDeleteDialogOpen(false);
       setSelectedAsset(null);
     } catch {
@@ -212,9 +242,7 @@ export default function Assets() {
       await updateAsset(Number(editAsset.id), editForm);
 
       toast.success("Asset updated successfully");
-
       setEditAsset(null);
-
       fetchAssets();
     } catch {
       toast.error("Failed to update asset");
@@ -333,7 +361,7 @@ export default function Assets() {
                         </div>
                       )}
 
-                      {asset.sourceType === "admin" && (
+                      {asset.sourceType === "Admin Upload" && (
                         <NeonButton
                           variant="secondary"
                           size="sm"
@@ -367,7 +395,6 @@ export default function Assets() {
             className="text-center py-12"
           >
             <Box className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
-
             <p className="text-lg text-muted-foreground">No assets found</p>
           </motion.div>
         )}
