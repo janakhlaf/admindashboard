@@ -1,9 +1,7 @@
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Box } from "lucide-react";
-import { Canvas } from "@react-three/fiber";
-import { OrbitControls, useGLTF, Center } from "@react-three/drei";
-import { Box3, Vector3 } from "three";
+import "@google/model-viewer";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
@@ -33,6 +31,14 @@ import {
 
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 
+declare global {
+  namespace JSX {
+    interface IntrinsicElements {
+      "model-viewer": any;
+    }
+  }
+}
+
 type StatusFilter = "all" | "pending" | "approved" | "rejected";
 
 type AdminAsset = Asset & {
@@ -42,64 +48,30 @@ type AdminAsset = Asset & {
   sourceType?: string;
 };
 
-function GLBModel({ url }: { url: string }) {
-  const gltf = useGLTF(url);
-
-  const model = useMemo(() => {
-    const clonedScene = gltf.scene.clone(true);
-
-    const box = new Box3().setFromObject(clonedScene);
-    const size = new Vector3();
-    const center = new Vector3();
-
-    box.getSize(size);
-    box.getCenter(center);
-
-    clonedScene.position.sub(center);
-
-    const maxSize = Math.max(size.x, size.y, size.z);
-    const scale = maxSize > 0 ? 2 / maxSize : 1;
-
-    clonedScene.scale.setScalar(scale);
-
-    return clonedScene;
-  }, [gltf.scene]);
-
-  return <primitive object={model} />;
-}
-
 function AssetViewer({ url }: { url?: string; name: string }) {
   if (!url) {
     return <Box className="w-24 h-24 neon-text-purple" />;
   }
 
   return (
-    <Canvas
-      camera={{
-        position: [0, 0, 4],
-        fov: 45,
+    <model-viewer
+      src={url}
+      camera-controls
+      auto-rotate
+      autoplay
+      shadow-intensity="1"
+      exposure="1.2"
+      environment-image="neutral"
+      camera-orbit="0deg 75deg 105%"
+      min-camera-orbit="auto auto 20%"
+      max-camera-orbit="auto auto 300%"
+      field-of-view="30deg"
+      style={{
+        width: "100%",
+        height: "100%",
+        backgroundColor: "#020617",
       }}
-      gl={{
-        preserveDrawingBuffer: true,
-      }}
-    >
-      <ambientLight intensity={2} />
-      <directionalLight position={[5, 5, 5]} intensity={2.5} />
-      <directionalLight position={[-5, -3, -5]} intensity={1} />
-
-      <Suspense fallback={null}>
-        <Center>
-          <GLBModel url={url} />
-        </Center>
-      </Suspense>
-
-      <OrbitControls
-        enableZoom={true}
-        enablePan={false}
-        autoRotate
-        autoRotateSpeed={1.5}
-      />
-    </Canvas>
+    />
   );
 }
 
