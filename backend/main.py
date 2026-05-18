@@ -17,7 +17,6 @@ load_dotenv()
 
 app = FastAPI(title="Admin Dashboard Backend")
 
-
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 
@@ -25,7 +24,6 @@ if not SUPABASE_URL or not SUPABASE_KEY:
     raise RuntimeError("SUPABASE_URL or SUPABASE_KEY is missing in .env")
 
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
-
 
 app.add_middleware(
     CORSMiddleware,
@@ -61,18 +59,6 @@ class AssetUpdate(BaseModel):
     bucket_path: Optional[str] = None
     file_type: Optional[str] = None
     file_size: Optional[int] = None
-
-
-class AdminFilmCreate(BaseModel):
-    title: str
-    description: Optional[str] = None
-    category: Optional[str] = None
-    price: Optional[float] = 0
-    thumbnail_url: Optional[str] = None
-    bucket_path: Optional[str] = None
-    duration: Optional[str] = None
-    file_size: Optional[str] = None
-    mime_type: Optional[str] = None
 
 
 @app.get("/")
@@ -143,21 +129,32 @@ async def admin_upload_asset(
     if not file_bytes:
         raise HTTPException(status_code=400, detail="Uploaded file is empty")
 
-    file_extension = file.filename.split(".")[-1] if "." in file.filename else "glb"
+    file_extension = (
+        file.filename.split(".")[-1].lower()
+        if file.filename and "." in file.filename
+        else "glb"
+    )
+
     unique_name = f"{uuid.uuid4()}.{file_extension}"
 
     private_path = f"admin/{unique_name}"
     preview_path = f"admin/{unique_name}"
 
-    content_type = file.content_type or "application/octet-stream"
+    if file_extension == "glb":
+        content_type = "model/gltf-binary"
+    elif file_extension == "gltf":
+        content_type = "model/gltf+json"
+    else:
+        content_type = file.content_type or "application/octet-stream"
 
     try:
+
         supabase.storage.from_("assets_private").upload(
             private_path,
             file_bytes,
             {
                 "content-type": content_type,
-                "upsert": "true",
+                "upsert": "true"
             }
         )
 
@@ -166,7 +163,7 @@ async def admin_upload_asset(
             file_bytes,
             {
                 "content-type": content_type,
-                "upsert": "true",
+                "upsert": "true"
             }
         )
 
@@ -177,6 +174,7 @@ async def admin_upload_asset(
         )
 
     except Exception as error:
+
         raise HTTPException(
             status_code=500,
             detail=f"Supabase upload failed: {str(error)}"
@@ -184,16 +182,22 @@ async def admin_upload_asset(
 
     new_asset = Asset(
         user_id=None,
+
         name=name,
         description=description,
         category=category,
+
         preview_url=preview_public_url,
         bucket_path=private_path,
-        file_type=content_type,
+
+        file_type=file_extension,
         file_size=len(file_bytes),
+
         price=price,
-        source_type="admin_upload",
+
+        source_type="admin",
         status="approved",
+
         rejection_reason=None,
     )
 
@@ -208,22 +212,124 @@ async def admin_upload_asset(
 
 
 @app.post("/admin/films/upload")
-def admin_upload_film(data: AdminFilmCreate, db: Session = Depends(get_db)):
+async def admin_upload_film(
+    title: str = Form(...),
+    description: Optional[str] = Form(None),
+    category: Optional[str] = Form(None),
+    duration: Optional[str] = Form(None),
+
+    thumbnail: UploadFile = File(...),
+    film_file: UploadFile = File(...),
+
+    db: Session = Depends(get_db)
+):
+
+    thumbnail_bytes = await thumbnail.read()
+    film_bytes = await film_file.read()
+
+    if not thumbnail_bytes:
+        raise HTTPException(
+            status_code=400,
+            detail="Thumbnail is empty"
+        )
+
+    if not film_bytes:
+        raise HTTPException(
+            status_code=400,
+            detail="Film file is empty"
+        )
+
+    thumbnail_extension = (
+        thumbnail.filename.split(".")[-1].lower()
+        if thumbnail.filename and "." in thumbnail.filename
+        else "png"
+    )
+
+    film_extension = (
+        film_file.filename.split(".")[-1].lower()
+        if film_file.filename and "." in film_file.filename
+        else "mp4"
+    )
+
+    unique_thumbnail_name = (
+        f"{uuid.uuid4()}.{thumbnail_extension}"
+    )
+
+    unique_film_name = (
+        f"{uuid.uuid4()}.{film_extension}"
+    )
+
+    thumbnail_path = f"films/{unique_thumbnail_name}"
+    film_path = f"films/{unique_film_name}"
+
+    thumbnail_content_type = (
+        thumbnail.content_type
+        or "image/png"
+    )
+
+    film_content_type = (
+        film_file.content_type
+        or "video/mp4"
+    )
+
+    try:
+
+        supabase.storage.from_("thumbnail_previw").upload(
+            thumbnail_path,
+            thumbnail_bytes,
+            {
+                "content-type": thumbnail_content_type,
+                "upsert": "true"
+            }
+        )
+
+        thumbnail_public_url = (
+            supabase.storage
+            .from_("thumbnail_previw")
+            .get_public_url(thumbnail_path)
+        )
+
+        supabase.storage.from_("films_private").upload(
+            film_path,
+            film_bytes,
+            {
+                "content-type": film_content_type,
+                "upsert": "true"
+            }
+        )
+
+    except Exception as error:
+
+        raise HTTPException(
+            status_code=500,
+            detail=f"Film upload failed: {str(error)}"
+        )
+
     new_film = Film(
         user_id=None,
-        title=data.title,
-        description=data.description,
-        category=data.category,
-        thumbnail_url=data.thumbnail_url,
-        bucket_path=data.bucket_path,
-        mime_type=data.mime_type,
-        price=data.price,
-        source_type="admin_upload",
+
+        title=title,
+        description=description,
+        category=category,
+
+        thumbnail_url=thumbnail_public_url,
+        thumbnail_basic=thumbnail_public_url,
+
+        bucket_path=film_path,
+
+        mime_type=film_content_type,
+
+        duration=duration,
+
+        file_size=f"{round(len(film_bytes) / 1024 / 1024, 2)} MB",
+
+        price=0,
+
+        source_type="admin",
+
         status="approved",
+
         rejection_reason=None,
-        duration=data.duration,
-        file_size=data.file_size,
-        thumbnail_basic=data.thumbnail_url,
     )
 
     db.add(new_film)
@@ -231,7 +337,7 @@ def admin_upload_film(data: AdminFilmCreate, db: Session = Depends(get_db)):
     db.refresh(new_film)
 
     return {
-        "message": "Admin film uploaded and approved successfully",
+        "message": "Film uploaded successfully",
         "film": new_film,
     }
 

@@ -20,37 +20,41 @@ const UploadFilm = () => {
       return;
     }
 
+    if (!thumbnail) {
+      setMessage("Thumbnail image is required");
+      return;
+    }
+
+    if (!filmFile) {
+      setMessage("Film file is required");
+      return;
+    }
+
     try {
       setLoading(true);
       setMessage("");
 
+      const formData = new FormData();
+
+      formData.append("title", title);
+      formData.append("category", genre);
+      formData.append("description", description);
+      formData.append("duration", duration);
+
+      formData.append("thumbnail", thumbnail);
+      formData.append("film_file", filmFile);
+
       const response = await fetch(`${API_URL}/admin/films/upload`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-
-        body: JSON.stringify({
-          title,
-          category: genre,
-          description,
-          duration,
-
-          thumbnail_url: thumbnail?.name || "",
-          bucket_path: filmFile?.name || "",
-
-          mime_type: filmFile?.type || "",
-
-          file_size: filmFile
-            ? `${(filmFile.size / 1024 / 1024).toFixed(2)} MB`
-            : "",
-
-          price: 0,
-        }),
+        body: formData,
       });
 
       if (!response.ok) {
-        throw new Error("Failed to upload film");
+        const errorData = await response.json().catch(() => null);
+
+        throw new Error(
+          errorData?.detail || "Failed to upload film"
+        );
       }
 
       setTitle("");
@@ -61,9 +65,18 @@ const UploadFilm = () => {
       setThumbnail(null);
       setFilmFile(null);
 
-      setMessage("Film uploaded successfully and approved directly.");
+      setMessage(
+        "Film uploaded successfully to Storage and Database."
+      );
+
     } catch (error) {
-      setMessage("Something went wrong while uploading film.");
+
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "Something went wrong while uploading film."
+      );
+
     } finally {
       setLoading(false);
     }
@@ -72,6 +85,7 @@ const UploadFilm = () => {
   return (
     <div className="min-h-screen p-8 text-white">
       <div className="max-w-5xl mx-auto">
+
         <h1 className="text-4xl font-bold mb-2">
           Upload Film
         </h1>
@@ -113,10 +127,12 @@ const UploadFilm = () => {
                 className="w-full bg-black/40 border border-cyan-500/20 rounded-xl px-4 py-3 outline-none focus:border-cyan-400"
               />
             </div>
+
           </div>
 
           {/* Description */}
           <div className="mt-6">
+
             <label className="block mb-2 text-sm text-cyan-300">
               Description
             </label>
@@ -128,10 +144,12 @@ const UploadFilm = () => {
               rows={5}
               className="w-full bg-black/40 border border-cyan-500/20 rounded-xl px-4 py-3 outline-none focus:border-cyan-400"
             />
+
           </div>
 
           {/* Duration */}
           <div className="mt-6">
+
             <label className="block mb-2 text-sm text-cyan-300">
               Duration
             </label>
@@ -143,10 +161,12 @@ const UploadFilm = () => {
               placeholder="10 min / 1h 20m..."
               className="w-full bg-black/40 border border-cyan-500/20 rounded-xl px-4 py-3 outline-none focus:border-cyan-400"
             />
+
           </div>
 
           {/* Thumbnail */}
           <div className="mt-6">
+
             <label className="block mb-2 text-sm text-cyan-300">
               Thumbnail
             </label>
@@ -159,7 +179,9 @@ const UploadFilm = () => {
               className="w-full rounded-2xl border-2 border-dashed border-cyan-500/20 bg-black/30 p-10 text-center hover:border-cyan-400 transition-all duration-300"
             >
               <p className="text-white font-medium">
-                {thumbnail ? thumbnail.name : "Choose Thumbnail Image"}
+                {thumbnail
+                  ? thumbnail.name
+                  : "Choose Thumbnail Image"}
               </p>
 
               <p className="text-sm text-gray-400 mt-2">
@@ -176,10 +198,12 @@ const UploadFilm = () => {
               }
               className="hidden"
             />
+
           </div>
 
           {/* Film File */}
           <div className="mt-6">
+
             <label className="block mb-2 text-sm text-cyan-300">
               Film File
             </label>
@@ -192,7 +216,9 @@ const UploadFilm = () => {
               className="w-full rounded-2xl border-2 border-dashed border-cyan-500/20 bg-black/30 p-10 text-center hover:border-cyan-400 transition-all duration-300"
             >
               <p className="text-white font-medium">
-                {filmFile ? filmFile.name : "Choose Film File"}
+                {filmFile
+                  ? filmFile.name
+                  : "Choose Film File"}
               </p>
 
               <p className="text-sm text-gray-400 mt-2">
@@ -209,6 +235,7 @@ const UploadFilm = () => {
               }
               className="hidden"
             />
+
           </div>
 
           {/* Message */}
@@ -220,6 +247,7 @@ const UploadFilm = () => {
 
           {/* Button */}
           <div className="mt-8">
+
             <button
               onClick={handleUploadFilm}
               disabled={loading}
@@ -227,7 +255,9 @@ const UploadFilm = () => {
             >
               {loading ? "Uploading..." : "Upload Film"}
             </button>
+
           </div>
+
         </div>
       </div>
     </div>
