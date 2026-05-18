@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
+import { supabase } from "../lib/supabase";
 
-const API_URL = "http://127.0.0.1:8000";
 
 const AdminLogin = () => {
   const navigate = useNavigate();
@@ -21,41 +21,58 @@ const AdminLogin = () => {
     setLoading(true);
 
     try {
-      const response = await fetch(
-        `${API_URL}/admin/login`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type":
-              "application/json",
-          },
-          body: JSON.stringify({
-            email,
-            password,
-          }),
-        }
-      );
+      const { data, error: authError } =
+  await supabase.auth.signInWithPassword({
+    email,
+    password,
+  });
 
-      const data = await response.json();
+if (authError || !data.user) {
+  throw new Error(
+    "Invalid email or password"
+  );
+}
 
-      if (!response.ok) {
-        throw new Error(
-          data.detail ||
-            "Login failed"
-        );
-      }
+const {
+  data: userData,
+  error: userError,
+} = await supabase
+  .from("users")
+  .select("*")
+  .eq(
+    "auth_user_id",
+    data.user.id
+  )
+  .single();
 
-      localStorage.setItem(
-        "admin_logged_in",
-        "true"
-      );
+if (
+  userError ||
+  !userData
+) {
+  throw new Error(
+    "Admin user not found"
+  );
+}
 
-      localStorage.setItem(
-        "admin_email",
-        data.email
-      );
+if (
+  userData.role !== "admin"
+) {
+  throw new Error(
+    "You are not authorized as admin"
+  );
+}
 
-      navigate("/");
+localStorage.setItem(
+  "admin_logged_in",
+  "true"
+);
+
+localStorage.setItem(
+  "admin_email",
+  userData.email
+);
+
+navigate("/");
     } catch (err: any) {
       setError(err.message);
     } finally {
