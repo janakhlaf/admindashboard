@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Outlet, NavLink } from "react-router-dom";
+import { Outlet, NavLink, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
   Users,
@@ -8,6 +8,7 @@ import {
   Zap,
   Upload,
   Clapperboard,
+  LogOut,
 } from "lucide-react";
 import { cn, ROUTE_PATHS } from "@/lib/index";
 
@@ -21,9 +22,18 @@ const navItems = [
 ];
 
 const NexusLayout = () => {
+  const navigate = useNavigate();
+
   useEffect(() => {
     document.documentElement.classList.add("dark");
   }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem("admin_logged_in");
+    localStorage.removeItem("admin_email");
+
+    navigate("/home", { replace: true });
+  };
 
   return (
     <div className="min-h-screen bg-background relative">
@@ -71,7 +81,10 @@ const NexusLayout = () => {
                     {isActive && (
                       <div
                         className="absolute left-0 top-0 bottom-0 w-[3px] rounded-r-full"
-                        style={{ background: "oklch(0.70 0.25 275)" }}
+                        style={{
+                          background:
+                            "oklch(0.70 0.25 275)",
+                        }}
                       />
                     )}
 
@@ -90,8 +103,17 @@ const NexusLayout = () => {
             ))}
           </nav>
 
-          <div className="p-4 border-t border-border/40">
-            <p className="text-xs text-muted-foreground text-center font-mono">
+          <div className="py-3 border-t border-border/40">
+            <button
+              type="button"
+              onClick={handleLogout}
+              title="Logout"
+              className="flex items-center justify-center h-12 w-full text-muted-foreground hover:text-red-400 transition-all duration-200"
+            >
+              <LogOut className="w-5 h-5" />
+            </button>
+
+            <p className="text-xs text-muted-foreground text-center font-mono mt-2">
               v2
             </p>
           </div>
@@ -105,4 +127,4 @@ const NexusLayout = () => {
   );
 };
 
-export default NexusLayout;
+export default NexusLayout;   

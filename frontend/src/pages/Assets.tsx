@@ -1,11 +1,11 @@
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Box } from "lucide-react";
-import { Canvas } from "@react-three/fiber";
-import { OrbitControls, useGLTF, Center } from "@react-three/drei";
+import "@google/model-viewer";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+
 import {
   Asset,
   formatDate,
@@ -13,6 +13,7 @@ import {
   formatCurrency,
   cn,
 } from "@/lib/index";
+
 import {
   getAssets,
   approveAsset,
@@ -20,13 +21,23 @@ import {
   deleteAsset,
   updateAsset,
 } from "@/api/assets";
+
 import {
   StatusBadge,
   NeonButton,
   PageHeader,
   SearchInput,
 } from "@/components/NexusUI";
+
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+
+declare global {
+  namespace JSX {
+    interface IntrinsicElements {
+      "model-viewer": any;
+    }
+  }
+}
 
 type StatusFilter = "all" | "pending" | "approved" | "rejected";
 
@@ -37,37 +48,30 @@ type AdminAsset = Asset & {
   sourceType?: string;
 };
 
-function GLBModel({ url }: { url: string }) {
-  const gltf = useGLTF(url);
-
-  return (
-    <Center>
-      <primitive object={gltf.scene} scale={1.6} />
-    </Center>
-  );
-}
-
 function AssetViewer({ url }: { url?: string; name: string }) {
   if (!url) {
     return <Box className="w-24 h-24 neon-text-purple" />;
   }
 
   return (
-    <Canvas camera={{ position: [0, 1.2, 4], fov: 45 }}>
-      <ambientLight intensity={1.5} />
-      <directionalLight position={[3, 3, 3]} intensity={2} />
-
-      <Suspense fallback={null}>
-        <GLBModel url={url} />
-      </Suspense>
-
-      <OrbitControls
-        enableZoom={true}
-        enablePan={false}
-      
-        autoRotateSpeed={1.5}
-      />
-    </Canvas>
+    <model-viewer
+      src={url}
+      camera-controls
+      auto-rotate
+      autoplay
+      shadow-intensity="1"
+      exposure="1.2"
+      environment-image="neutral"
+      camera-orbit="0deg 75deg 105%"
+      min-camera-orbit="auto auto 20%"
+      max-camera-orbit="auto auto 300%"
+      field-of-view="30deg"
+      style={{
+        width: "100%",
+        height: "100%",
+        backgroundColor: "#020617",
+      }}
+    />
   );
 }
 
@@ -77,7 +81,6 @@ export default function Assets() {
   const [searchQuery, setSearchQuery] = useState("");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedAsset, setSelectedAsset] = useState<AdminAsset | null>(null);
-
   const [editAsset, setEditAsset] = useState<AdminAsset | null>(null);
 
   const [editForm, setEditForm] = useState({
@@ -96,7 +99,7 @@ export default function Assets() {
       const data = await getAssets();
 
       const mappedAssets: AdminAsset[] = data.map((asset: any) => {
-        const isAdminAsset = asset.source_type === "admin";
+        const isAdminAsset = asset.source_type === "admin_upload";
 
         return {
           id: String(asset.id),
@@ -111,7 +114,7 @@ export default function Assets() {
           preview: asset.preview_url || "",
           fileType: asset.file_type || "file",
           description: asset.description || "",
-          sourceType: asset.source_type || "user",
+          sourceType: isAdminAsset ? "Admin Upload" : "User Upload",
         };
       });
 
@@ -181,7 +184,6 @@ export default function Assets() {
       );
 
       toast.success(`${selectedAsset.name} deleted`);
-
       setDeleteDialogOpen(false);
       setSelectedAsset(null);
     } catch {
@@ -212,9 +214,7 @@ export default function Assets() {
       await updateAsset(Number(editAsset.id), editForm);
 
       toast.success("Asset updated successfully");
-
       setEditAsset(null);
-
       fetchAssets();
     } catch {
       toast.error("Failed to update asset");
@@ -333,7 +333,7 @@ export default function Assets() {
                         </div>
                       )}
 
-                      {asset.sourceType === "admin" && (
+                      {asset.sourceType === "Admin Upload" && (
                         <NeonButton
                           variant="secondary"
                           size="sm"
@@ -367,7 +367,6 @@ export default function Assets() {
             className="text-center py-12"
           >
             <Box className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
-
             <p className="text-lg text-muted-foreground">No assets found</p>
           </motion.div>
         )}

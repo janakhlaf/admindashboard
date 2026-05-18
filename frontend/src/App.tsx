@@ -10,16 +10,27 @@ import { ROUTE_PATHS } from "@/lib/index";
 
 import NexusLayout from "@/components/NexusLayout";
 
+import Home from "@/pages/Home";
 import Overview from "@/pages/Overview";
 import Users from "@/pages/Users";
 import Films from "@/pages/Films";
 import Assets from "@/pages/Assets";
-
-/* NEW PAGES */
 import UploadAsset from "@/pages/UploadAsset";
 import UploadFilm from "@/pages/UploadFilm";
+import AdminLogin from "@/pages/AdminLogin";
 
 const queryClient = new QueryClient();
+
+const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
+  const isLoggedIn =
+    localStorage.getItem("admin_logged_in") === "true";
+
+  if (!isLoggedIn) {
+    return <Navigate to="/home" replace />;
+  }
+
+  return children;
+};
 
 const App = () => {
   useEffect(() => {
@@ -35,33 +46,36 @@ const App = () => {
 
           <HashRouter>
             <Routes>
-              <Route element={<NexusLayout />}>
-                
-                {/* Dashboard */}
+              <Route path="/home" element={<Home />} />
+
+              <Route path="/login" element={<AdminLogin />} />
+
+              <Route
+                element={
+                  <ProtectedRoute>
+                    <NexusLayout />
+                  </ProtectedRoute>
+                }
+              >
                 <Route
                   path={ROUTE_PATHS.DASHBOARD}
                   element={<Overview />}
                 />
 
-                {/* Users */}
                 <Route
                   path={ROUTE_PATHS.USERS}
                   element={<Users />}
                 />
 
-                {/* Films */}
                 <Route
                   path={ROUTE_PATHS.FILMS}
                   element={<Films />}
                 />
 
-                {/* Assets */}
                 <Route
                   path={ROUTE_PATHS.ASSETS}
                   element={<Assets />}
                 />
-
-                {/* NEW ADMIN UPLOAD PAGES */}
 
                 <Route
                   path="/upload-asset"
@@ -74,15 +88,9 @@ const App = () => {
                 />
               </Route>
 
-              {/* Redirect */}
               <Route
                 path="*"
-                element={
-                  <Navigate
-                    to={ROUTE_PATHS.DASHBOARD}
-                    replace
-                  />
-                }
+                element={<Navigate to="/home" replace />}
               />
             </Routes>
           </HashRouter>

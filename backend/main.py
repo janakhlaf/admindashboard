@@ -11,21 +11,23 @@ from models import Film, Asset, User
 
 app = FastAPI(title="Admin Dashboard Backend")
 
-# =========================
-# CORS SETTINGS
-# =========================
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # مؤقتًا للسماح لكل المنافذ
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+
 # =========================
 # MODELS
 # =========================
+
+class AdminLogin(BaseModel):
+    email: str
+    password: str
+
 
 class FilmUpdate(BaseModel):
     title: Optional[str] = None
@@ -82,7 +84,44 @@ def root():
 
 
 # =========================
-# GET DATA
+# ADMIN LOGIN
+# =========================
+
+@app.post("/admin/login")
+def admin_login(data: AdminLogin, db: Session = Depends(get_db)):
+
+    admin_user = (
+        db.query(User)
+        .filter(
+            User.email == data.email,
+            User.role == "admin"
+        )
+        .first()
+    )
+
+    if not admin_user:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid admin email"
+        )
+
+    # TEMP PASSWORD CHECK
+
+    if admin_user.password_hash != data.password:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid password"
+        )
+
+    return {
+        "message": "Admin login successful",
+        "admin_id": admin_user.id,
+        "email": admin_user.email,
+    }
+
+
+# =========================
+# GET FILMS
 # =========================
 
 @app.get("/films")
@@ -90,10 +129,18 @@ def get_films(db: Session = Depends(get_db)):
     return db.query(Film).all()
 
 
+# =========================
+# GET ASSETS
+# =========================
+
 @app.get("/assets")
 def get_assets(db: Session = Depends(get_db)):
     return db.query(Asset).all()
 
+
+# =========================
+# GET USERS
+# =========================
 
 @app.get("/users")
 def get_users(db: Session = Depends(get_db)):
@@ -114,11 +161,12 @@ def get_users(db: Session = Depends(get_db)):
 
 
 # =========================
-# ADMIN ASSET UPLOAD
+# ADMIN UPLOAD ASSET
 # =========================
 
 @app.post("/admin/assets/upload")
 def admin_upload_asset(data: AdminAssetCreate, db: Session = Depends(get_db)):
+
     new_asset = Asset(
         user_id=None,
         name=data.name,
@@ -140,16 +188,17 @@ def admin_upload_asset(data: AdminAssetCreate, db: Session = Depends(get_db)):
 
     return {
         "message": "Admin asset uploaded and approved successfully",
-        "asset": new_asset,
+        "asset": new_asset
     }
 
 
 # =========================
-# ADMIN FILM UPLOAD
+# ADMIN UPLOAD FILM
 # =========================
 
 @app.post("/admin/films/upload")
 def admin_upload_film(data: AdminFilmCreate, db: Session = Depends(get_db)):
+
     new_film = Film(
         user_id=None,
         title=data.title,
@@ -173,5 +222,113 @@ def admin_upload_film(data: AdminFilmCreate, db: Session = Depends(get_db)):
 
     return {
         "message": "Admin film uploaded and approved successfully",
-        "film": new_film,
+        "film": new_film
     }
+
+
+# =========================
+# UPDATE FILM
+# =========================
+
+@app.put("/films/{film_id}")
+def update_film(
+    film_id: int,
+    data: FilmUpdate,
+    db: Session = Depends(get_db)
+):
+
+    film = db.query(Film).filter(Film.id == film_id).first()
+
+    if not film:
+        raise HTTPException(
+            status_code=404,
+            detail="Film not found"
+        )
+
+    update_data = data.dict(exclude_unset=True)
+
+    for key, value in update_data.items():
+        setattr(film, key, value)
+
+    db.commit()
+    db.refresh(film)
+
+    return {
+        "message": "Film updated successfully",
+        "film": film
+    }
+
+
+# =========================
+# DELETE FILM
+# =========================
+
+@app.delete("/films/{film_id}")
+def delete_film(film_id: int, db: Session = Depends(get_db)):
+
+    film = db.query(Film).filter(Film.id == film_id).first()
+
+    if not film:
+        raise HTTPException(
+            status_code=404,
+            detail="Film not found"
+        )
+
+    db.delete(film)
+    db.commit()
+
+    return {"message": "Film deleted successfully"}
+
+
+# =========================
+# UPDATE ASSET
+# =========================
+
+@app.put("/assets/{asset_id}")
+def update_asset(
+    asset_id: int,
+    data: AssetUpdate,
+    db: Session = Depends(get_db)
+):
+
+    asset = db.query(Asset).filter(Asset.id == asset_id).first()
+
+    if not asset:
+        raise HTTPException(
+            status_code=404,
+            detail="Asset not found"
+        )
+
+    update_data = data.dict(exclude_unset=True)
+
+    for key, value in update_data.items():
+        setattr(asset, key, value)
+
+    db.commit()
+    db.refresh(asset)
+
+    return {
+        "message": "Asset updated successfully",
+        "asset": asset
+    }
+
+
+# =========================
+# DELETE ASSET
+# =========================
+
+@app.delete("/assets/{asset_id}")
+def delete_asset(asset_id: int, db: Session = Depends(get_db)):
+
+    asset = db.query(Asset).filter(Asset.id == asset_id).first()
+
+    if not asset:
+        raise HTTPException(
+            status_code=404,
+            detail="Asset not found"
+        )
+
+    db.delete(asset)
+    db.commit()
+
+    return {"message": "Asset deleted successfully"}
