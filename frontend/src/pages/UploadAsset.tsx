@@ -18,29 +18,30 @@ const UploadAsset = () => {
       return;
     }
 
+    if (!file) {
+      setMessage("Asset file is required");
+      return;
+    }
+
     try {
       setLoading(true);
       setMessage("");
 
+      const formData = new FormData();
+      formData.append("name", assetName);
+      formData.append("category", category);
+      formData.append("description", description);
+      formData.append("price", price ? String(Number(price)) : "0");
+      formData.append("file", file);
+
       const response = await fetch(`${API_URL}/admin/assets/upload`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          name: assetName,
-          category,
-          description,
-          price: price ? Number(price) : 0,
-          file_type: file?.type || "",
-          file_size: file?.size || 0,
-          bucket_path: file?.name || "",
-          preview_url: "",
-        }),
+        body: formData,
       });
 
       if (!response.ok) {
-        throw new Error("Failed to upload asset");
+        const errorData = await response.json().catch(() => null);
+        throw new Error(errorData?.detail || "Failed to upload asset");
       }
 
       setAssetName("");
@@ -49,9 +50,13 @@ const UploadAsset = () => {
       setPrice("");
       setFile(null);
 
-      setMessage("Asset uploaded successfully and approved directly.");
+      setMessage("Asset uploaded successfully to Storage and Database.");
     } catch (error) {
-      setMessage("Something went wrong while uploading asset.");
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "Something went wrong while uploading asset."
+      );
     } finally {
       setLoading(false);
     }
@@ -60,7 +65,9 @@ const UploadAsset = () => {
   return (
     <div className="min-h-screen p-8 text-white">
       <div className="max-w-5xl mx-auto">
-        <h1 className="text-4xl font-bold mb-2">Upload Asset</h1>
+        <h1 className="text-4xl font-bold mb-2">
+          Upload Asset
+        </h1>
 
         <p className="text-gray-400 mb-10">
           Upload and publish new marketplace assets directly from the admin dashboard.
