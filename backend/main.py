@@ -1,6 +1,7 @@
 from typing import Optional
 import os
 import uuid
+import json
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, Form
@@ -121,6 +122,7 @@ async def admin_upload_asset(
     description: Optional[str] = Form(None),
     category: Optional[str] = Form(None),
     price: float = Form(0),
+    tags: Optional[str] = Form(None),
     file: UploadFile = File(...),
     db: Session = Depends(get_db)
 ):
@@ -148,14 +150,13 @@ async def admin_upload_asset(
         content_type = file.content_type or "application/octet-stream"
 
     try:
-
         supabase.storage.from_("assets_private").upload(
             private_path,
             file_bytes,
             {
                 "content-type": content_type,
-                "upsert": "true"
-            }
+                "upsert": "true",
+            },
         )
 
         supabase.storage.from_("assets_previwe").upload(
@@ -163,8 +164,8 @@ async def admin_upload_asset(
             file_bytes,
             {
                 "content-type": content_type,
-                "upsert": "true"
-            }
+                "upsert": "true",
+            },
         )
 
         preview_public_url = (
@@ -174,11 +175,12 @@ async def admin_upload_asset(
         )
 
     except Exception as error:
-
         raise HTTPException(
             status_code=500,
-            detail=f"Supabase upload failed: {str(error)}"
+            detail=f"Supabase upload failed: {str(error)}",
         )
+
+    parsed_tags = json.loads(tags) if tags else []
 
     new_asset = Asset(
         user_id=None,
@@ -186,6 +188,8 @@ async def admin_upload_asset(
         name=name,
         description=description,
         category=category,
+
+        tags=parsed_tags,
 
         preview_url=preview_public_url,
         bucket_path=private_path,
@@ -223,20 +227,19 @@ async def admin_upload_film(
 
     db: Session = Depends(get_db)
 ):
-
     thumbnail_bytes = await thumbnail.read()
     film_bytes = await film_file.read()
 
     if not thumbnail_bytes:
         raise HTTPException(
             status_code=400,
-            detail="Thumbnail is empty"
+            detail="Thumbnail is empty",
         )
 
     if not film_bytes:
         raise HTTPException(
             status_code=400,
-            detail="Film file is empty"
+            detail="Film file is empty",
         )
 
     thumbnail_extension = (
@@ -251,36 +254,23 @@ async def admin_upload_film(
         else "mp4"
     )
 
-    unique_thumbnail_name = (
-        f"{uuid.uuid4()}.{thumbnail_extension}"
-    )
-
-    unique_film_name = (
-        f"{uuid.uuid4()}.{film_extension}"
-    )
+    unique_thumbnail_name = f"{uuid.uuid4()}.{thumbnail_extension}"
+    unique_film_name = f"{uuid.uuid4()}.{film_extension}"
 
     thumbnail_path = f"films/{unique_thumbnail_name}"
     film_path = f"films/{unique_film_name}"
 
-    thumbnail_content_type = (
-        thumbnail.content_type
-        or "image/png"
-    )
-
-    film_content_type = (
-        film_file.content_type
-        or "video/mp4"
-    )
+    thumbnail_content_type = thumbnail.content_type or "image/png"
+    film_content_type = film_file.content_type or "video/mp4"
 
     try:
-
         supabase.storage.from_("thumbnail_previw").upload(
             thumbnail_path,
             thumbnail_bytes,
             {
                 "content-type": thumbnail_content_type,
-                "upsert": "true"
-            }
+                "upsert": "true",
+            },
         )
 
         thumbnail_public_url = (
@@ -294,15 +284,14 @@ async def admin_upload_film(
             film_bytes,
             {
                 "content-type": film_content_type,
-                "upsert": "true"
-            }
+                "upsert": "true",
+            },
         )
 
     except Exception as error:
-
         raise HTTPException(
             status_code=500,
-            detail=f"Film upload failed: {str(error)}"
+            detail=f"Film upload failed: {str(error)}",
         )
 
     new_film = Film(

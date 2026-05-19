@@ -99,7 +99,10 @@ export default function Assets() {
       const data = await getAssets();
 
       const mappedAssets: AdminAsset[] = data.map((asset: any) => {
-        const isAdminAsset = asset.source_type === "admin_upload";
+
+        const isAdminAsset =
+          asset.source_type === "admin" ||
+          asset.source_type === "admin_upload";
 
         return {
           id: String(asset.id),
@@ -107,18 +110,26 @@ export default function Assets() {
           category: asset.category || "Uncategorized",
           price: Number(asset.price) || 0,
           status: asset.status || "pending",
-          uploader: isAdminAsset ? "Admin" : `User ${asset.user_id ?? ""}`,
+
+          uploader: isAdminAsset
+            ? "Admin"
+            : `User ${asset.user_id ?? ""}`,
+
           uploadDate: new Date().toISOString(),
           fileSize: Number(asset.file_size) || 0,
           polygons: 0,
           preview: asset.preview_url || "",
           fileType: asset.file_type || "file",
           description: asset.description || "",
-          sourceType: isAdminAsset ? "Admin Upload" : "User Upload",
+
+          sourceType: isAdminAsset
+            ? "Admin Upload"
+            : "User Upload",
         };
       });
 
       setAssets(mappedAssets);
+
     } catch {
       toast.error("Failed to load assets");
     }
