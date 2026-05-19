@@ -18,15 +18,17 @@ import Assets from "@/pages/Assets";
 import UploadAsset from "@/pages/UploadAsset";
 import UploadFilm from "@/pages/UploadFilm";
 import AdminLogin from "@/pages/AdminLogin";
+import AdminSlider from "./pages/AdminSlider.jsx";
 
 const queryClient = new QueryClient();
 
-const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
+// 🟢 حماية الأدمن
+const ProtectedRoute = ({ children }) => {
   const isLoggedIn =
     localStorage.getItem("admin_logged_in") === "true";
 
   if (!isLoggedIn) {
-    return <Navigate to="/home" replace />;
+    return <Navigate to="/login" replace />;
   }
 
   return children;
@@ -46,10 +48,12 @@ const App = () => {
 
           <HashRouter>
             <Routes>
-              <Route path="/home" element={<Home />} />
 
+              {/* 🟢 Public */}
+              <Route path="/home" element={<Home />} />
               <Route path="/login" element={<AdminLogin />} />
 
+              {/* 🟢 Protected Dashboard Layout */}
               <Route
                 element={
                   <ProtectedRoute>
@@ -57,41 +61,28 @@ const App = () => {
                   </ProtectedRoute>
                 }
               >
+
+                {/* Dashboard pages */}
                 <Route
                   path={ROUTE_PATHS.DASHBOARD}
                   element={<Overview />}
                 />
+                <Route path={ROUTE_PATHS.USERS} element={<Users />} />
+                <Route path={ROUTE_PATHS.FILMS} element={<Films />} />
+                <Route path={ROUTE_PATHS.ASSETS} element={<Assets />} />
 
-                <Route
-                  path={ROUTE_PATHS.USERS}
-                  element={<Users />}
-                />
+                {/* Upload pages */}
+                <Route path="/upload-asset" element={<UploadAsset />} />
+                <Route path="/upload-film" element={<UploadFilm />} />
 
-                <Route
-                  path={ROUTE_PATHS.FILMS}
-                  element={<Films />}
-                />
+                {/* 🟢 Admin Slider داخل نفس النظام */}
+                <Route path="/admin-slider" element={<AdminSlider />} />
 
-                <Route
-                  path={ROUTE_PATHS.ASSETS}
-                  element={<Assets />}
-                />
-
-                <Route
-                  path="/upload-asset"
-                  element={<UploadAsset />}
-                />
-
-                <Route
-                  path="/upload-film"
-                  element={<UploadFilm />}
-                />
               </Route>
 
-              <Route
-                path="*"
-                element={<Navigate to="/home" replace />}
-              />
+              {/* 🟢 fallback */}
+              <Route path="*" element={<Navigate to="/home" replace />} />
+
             </Routes>
           </HashRouter>
         </MotionConfig>

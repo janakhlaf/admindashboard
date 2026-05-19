@@ -19,6 +19,7 @@ const navItems = [
   { path: ROUTE_PATHS.ASSETS, icon: Box },
   { path: "/upload-asset", icon: Upload },
   { path: "/upload-film", icon: Clapperboard },
+  { path: "/admin-slider", icon: Zap }, // 🟢 أضفناها عشان تبين بالسايدبار
 ];
 
 const NexusLayout = () => {
@@ -37,6 +38,8 @@ const NexusLayout = () => {
 
   return (
     <div className="min-h-screen bg-background relative">
+
+      {/* 🟢 Background Grid */}
       <div
         className="fixed inset-0 pointer-events-none"
         style={{
@@ -46,8 +49,11 @@ const NexusLayout = () => {
         }}
       />
 
+      {/* 🟢 Sidebar */}
       <aside className="fixed left-0 top-0 h-screen w-16 z-50 bg-card/80 backdrop-blur-xl border-r border-border/40">
         <div className="flex flex-col h-full">
+
+          {/* Logo */}
           <div className="h-20 flex items-center justify-center">
             <div
               className="w-10 h-10 rounded-lg flex items-center justify-center"
@@ -62,6 +68,7 @@ const NexusLayout = () => {
             </div>
           </div>
 
+          {/* Navigation */}
           <nav className="flex-1 py-4 space-y-1">
             {navItems.map((item) => (
               <NavLink
@@ -81,28 +88,18 @@ const NexusLayout = () => {
                     {isActive && (
                       <div
                         className="absolute left-0 top-0 bottom-0 w-[3px] rounded-r-full"
-                        style={{
-                          background:
-                            "oklch(0.70 0.25 275)",
-                        }}
+                        style={{ background: "oklch(0.70 0.25 275)" }}
                       />
                     )}
 
-                    <div
-                      className={cn(
-                        "transition-all duration-200",
-                        !isActive &&
-                          "hover:drop-shadow-[0_0_8px_oklch(0.7_0.25_270_/_0.4)]"
-                      )}
-                    >
-                      <item.icon className="w-5 h-5" />
-                    </div>
+                    <item.icon className="w-5 h-5" />
                   </>
                 )}
               </NavLink>
             ))}
           </nav>
 
+          {/* Logout */}
           <div className="py-3 border-t border-border/40">
             <button
               type="button"
@@ -120,11 +117,17 @@ const NexusLayout = () => {
         </div>
       </aside>
 
+      {/* 🟢 MAIN CONTENT (FIXED IMPORTANT PART) */}
       <main className="ml-16 min-h-screen relative z-10">
-        <Outlet />
+        
+        {/* 🔥 هذا أهم تعديل */}
+        <div className="p-6 w-full min-h-screen">
+          <Outlet />
+        </div>
+
       </main>
     </div>
   );
 };
 
-export default NexusLayout;   
+export default NexusLayout;
