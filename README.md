@@ -34,3 +34,4 @@ all edits done without the payment issus.****
 ## git reset --hard
 ## git clean -fd
 ********************************************************************
+slider added ////
