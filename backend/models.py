@@ -30,6 +30,8 @@ class Film(Base):
     description = Column(Text)
     category = Column(String)
 
+    tags = Column(ARRAY(Text))
+
     thumbnail_url = Column(Text)
     bucket_path = Column(Text)
 

@@ -221,6 +221,7 @@ async def admin_upload_film(
     description: Optional[str] = Form(None),
     category: Optional[str] = Form(None),
     duration: Optional[str] = Form(None),
+    tags: Optional[str] = Form(None),
 
     thumbnail: UploadFile = File(...),
     film_file: UploadFile = File(...),
@@ -294,12 +295,16 @@ async def admin_upload_film(
             detail=f"Film upload failed: {str(error)}",
         )
 
+    parsed_tags = json.loads(tags) if tags else []
+
     new_film = Film(
         user_id=None,
 
         title=title,
         description=description,
         category=category,
+
+        tags=parsed_tags,
 
         thumbnail_url=thumbnail_public_url,
         thumbnail_basic=thumbnail_public_url,
