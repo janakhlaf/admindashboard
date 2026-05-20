@@ -57,8 +57,8 @@ def upload_film(
     thumbnail_ext = thumbnail.filename.split(".")[-1]
     film_ext = film_file.filename.split(".")[-1]
 
-    thumbnail_name = f"admin/{uuid.uuid4()}.{thumbnail_ext}"
-    film_name = f"admin/{uuid.uuid4()}.{film_ext}"
+    thumbnail_name = f"films/{uuid.uuid4()}.{thumbnail_ext}"
+    film_name = f"films/{uuid.uuid4()}.{film_ext}"
 
     thumbnail_bytes = thumbnail.file.read()
     film_bytes = film_file.file.read()

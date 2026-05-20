@@ -87,15 +87,20 @@ export default function Films() {
   };
 
   const filteredFilms = films.filter((film) => {
-    const matchesStatus =
-      statusFilter === "all" || film.status === statusFilter;
+  const matchesStatus =
+    statusFilter === "all" || film.status === statusFilter;
 
-    const matchesSearch = film.title
+  const search = searchQuery.trim().toLowerCase();
+
+  const matchesSearch =
+    search === "" ||
+    film.title
+      .trim()
       .toLowerCase()
-      .includes(searchQuery.toLowerCase());
+      .startsWith(search);
 
-    return matchesStatus && matchesSearch;
-  });
+  return matchesStatus && matchesSearch;
+});
 
   const handleApprove = async (filmId: string) => {
     try {
@@ -402,56 +407,81 @@ export default function Films() {
           <div className="glass-card p-6 rounded-xl w-full max-w-md space-y-4">
             <h2 className="text-2xl font-bold">Edit Film</h2>
 
-            <input
-              type="text"
-              placeholder="Title"
-              value={editForm.title}
-              onChange={(e) =>
-                setEditForm({
-                  ...editForm,
-                  title: e.target.value,
-                })
-              }
-              className="w-full p-3 rounded-lg bg-background border border-border"
-            />
+            <div className="space-y-4">
 
-            <input
-              type="text"
-              placeholder="Category"
-              value={editForm.category}
-              onChange={(e) =>
-                setEditForm({
-                  ...editForm,
-                  category: e.target.value,
-                })
-              }
-              className="w-full p-3 rounded-lg bg-background border border-border"
-            />
+  <div>
+    <label className="block text-sm text-cyan-400 mb-2">
+      Title
+    </label>
 
-            <textarea
-              placeholder="Description"
-              value={editForm.description}
-              onChange={(e) =>
-                setEditForm({
-                  ...editForm,
-                  description: e.target.value,
-                })
-              }
-              className="w-full p-3 rounded-lg bg-background border border-border min-h-[100px]"
-            />
+    <input
+      type="text"
+      value={editForm.title}
+      onChange={(e) =>
+        setEditForm({
+          ...editForm,
+          title: e.target.value,
+        })
+      }
+      className="w-full bg-black/40 border border-cyan-500/30 rounded-xl px-4 py-3 text-white outline-none focus:border-cyan-400"
+    />
+  </div>
 
-            <input
-              type="number"
-              placeholder="Price"
-              value={editForm.price}
-              onChange={(e) =>
-                setEditForm({
-                  ...editForm,
-                  price: Number(e.target.value),
-                })
-              }
-              className="w-full p-3 rounded-lg bg-background border border-border"
-            />
+  <div>
+    <label className="block text-sm text-cyan-400 mb-2">
+      Category
+    </label>
+
+    <input
+      type="text"
+      value={editForm.category}
+      onChange={(e) =>
+        setEditForm({
+          ...editForm,
+          category: e.target.value,
+        })
+      }
+      className="w-full bg-black/40 border border-cyan-500/30 rounded-xl px-4 py-3 text-white outline-none focus:border-cyan-400"
+    />
+  </div>
+
+  <div>
+    <label className="block text-sm text-cyan-400 mb-2">
+      Description
+    </label>
+
+    <textarea
+      rows={5}
+      value={editForm.description}
+      onChange={(e) =>
+        setEditForm({
+          ...editForm,
+          description: e.target.value,
+        })
+      }
+      className="w-full bg-black/40 border border-cyan-500/30 rounded-xl px-4 py-3 text-white outline-none focus:border-cyan-400 resize-none"
+    />
+  </div>
+
+  <div>
+    <label className="block text-sm text-cyan-400 mb-2">
+      Price
+    </label>
+
+    <input
+      type="number"
+      value={editForm.price}
+      onChange={(e) =>
+        setEditForm({
+          ...editForm,
+          price: Number(e.target.value),
+        })
+      }
+      className="w-full bg-black/40 border border-cyan-500/30 rounded-xl px-4 py-3 text-white outline-none focus:border-cyan-400"
+    />
+  </div>
+
+</div>
 
             <div className="flex gap-3">
               <NeonButton

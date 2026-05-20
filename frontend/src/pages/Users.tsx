@@ -167,7 +167,7 @@ export default function Users() {
       const mappedUsers: User[] = data.map((user: any) => ({
         id: String(user.id),
 
-        name: user.name || `User ${user.id}`,
+       name: user.full_name || user.email?.split("@")[0] || `User ${user.id}`,
 
         email: user.email,
 
@@ -187,11 +187,22 @@ export default function Users() {
   };
 
   // ── FILTER USERS ───────────────────────────────────────────────────────────
-  const filteredUsers = users.filter(
-    (u) =>
-      u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      u.email.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredUsers = users.filter((u) => {
+  const search = searchQuery.trim().toLowerCase();
+
+  if (search === "") return true;
+
+  return (
+    u.name
+      .trim()
+      .toLowerCase()
+      .startsWith(search) ||
+    u.email
+      .trim()
+      .toLowerCase()
+      .startsWith(search)
   );
+});
 
   // ── TOGGLE EXPAND ──────────────────────────────────────────────────────────
   const toggleExpand = (userId: string) => {
