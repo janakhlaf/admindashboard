@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { supabase } from "@/lib/supabase";
 
 const API_URL = "http://localhost:8000";
 
@@ -55,10 +56,26 @@ const UploadAsset = () => {
       formData.append("tags", JSON.stringify(selectedTags));
       formData.append("file", file);
 
-      const response = await fetch(`${API_URL}/admin/assets/upload`, {
-        method: "POST",
-        body: formData,
-      });
+      
+      
+      
+      const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
+        if (!session) {
+          throw new Error("You must be logged in");
+        }
+
+        const response = await fetch(`${API_URL}/admin/assets/upload`, {
+          method: "POST",
+
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
+
+          body: formData,
+        });
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => null);
