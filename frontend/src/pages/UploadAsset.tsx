@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { File } from "lucide-react";
 
 const API_URL = "http://localhost:8000";
 
@@ -228,16 +229,20 @@ const UploadAsset = () => {
 
             <div className="border-2 border-dashed border-cyan-500/20 rounded-2xl p-10 text-center bg-black/30">
               <input
-                type="file"
-                onChange={(e) => setFile(e.target.files?.[0] || null)}
-                className="text-sm text-gray-400"
-              />
+              type="file"
+              id="asset-upload"
+              onChange={(e) => setFile(e.target.files?.[0] || null)}
+              className="hidden"
+            />
 
-              {file && (
-                <p className="mt-3 text-sm text-gray-400">
-                  Selected: {file.name}
-                </p>
-              )}
+            <label
+          htmlFor="asset-upload"
+          className="cursor-pointer text-sm text-gray-400 flex items-center justify-center gap-2"
+        >
+          <File className="w-4 h-4" />
+
+          {file ? file.name : "Choose File"}
+        </label>
             </div>
           </div>
 
