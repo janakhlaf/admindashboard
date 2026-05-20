@@ -1,5 +1,5 @@
 from sqlalchemy import Column, Integer, String, Text, ForeignKey, Numeric, BigInteger
-from sqlalchemy.dialects.postgresql import ARRAY
+from sqlalchemy.dialects.postgresql import ARRAY, UUID
 
 from database import Base
 
@@ -18,7 +18,7 @@ class User(Base):
 
     role = Column(String)
 
-    auth_user_id = Column(String, unique=True)
+    auth_user_id = Column(UUID(as_uuid=True), unique=True)
 
     profile_image = Column(Text)
 

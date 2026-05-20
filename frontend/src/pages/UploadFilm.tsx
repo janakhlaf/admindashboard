@@ -1,3 +1,4 @@
+import { supabase } from "@/lib/supabase";
 import { useState } from "react";
 
 const API_URL = "http://localhost:8000";
@@ -78,17 +79,29 @@ const UploadFilm = () => {
       formData.append("description", description);
       formData.append("duration", duration);
       formData.append("tags", JSON.stringify(selectedTags));
-
       formData.append("thumbnail", thumbnail);
       formData.append("film_file", filmFile);
 
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!session) {
+        throw new Error("You must be logged in");
+      }
+
       const response = await fetch(`${API_URL}/admin/films/upload`, {
         method: "POST",
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
         body: formData,
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => null);
+        const errorData = await response
+          .json()
+          .catch((_error: unknown): null => null);
 
         throw new Error(errorData?.detail || "Failed to upload film");
       }
@@ -98,7 +111,6 @@ const UploadFilm = () => {
       setDescription("");
       setDuration("");
       setSelectedTags([]);
-
       setThumbnail(null);
       setFilmFile(null);
 
@@ -125,7 +137,6 @@ const UploadFilm = () => {
 
         <div className="bg-[#07111f]/80 border border-cyan-500/20 rounded-2xl p-8 backdrop-blur-xl">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Film Title */}
             <div>
               <label className="block mb-2 text-sm text-cyan-300">
                 Film Title
@@ -140,7 +151,6 @@ const UploadFilm = () => {
               />
             </div>
 
-            {/* Genre */}
             <div>
               <label className="block mb-2 text-sm text-cyan-300">
                 Genre
@@ -156,7 +166,6 @@ const UploadFilm = () => {
             </div>
           </div>
 
-          {/* Description */}
           <div className="mt-6">
             <label className="block mb-2 text-sm text-cyan-300">
               Description
@@ -171,7 +180,6 @@ const UploadFilm = () => {
             />
           </div>
 
-          {/* Duration */}
           <div className="mt-6">
             <label className="block mb-2 text-sm text-cyan-300">
               Duration
@@ -186,7 +194,6 @@ const UploadFilm = () => {
             />
           </div>
 
-          {/* Tags */}
           <div className="mt-6">
             <label className="block mb-2 text-sm text-cyan-300">
               Tags (Select up to 3)
@@ -226,81 +233,41 @@ const UploadFilm = () => {
                     onClick={() => handleRemoveTag(tag)}
                     className="text-xs font-bold"
                   >
-                    ✕
+                    ×
                   </button>
                 </div>
               ))}
             </div>
-
-            {selectedTags.length >= 3 && (
-              <p className="text-xs text-gray-400 mt-2">
-                Maximum 3 tags selected
-              </p>
-            )}
           </div>
 
-          {/* Thumbnail */}
           <div className="mt-6">
             <label className="block mb-2 text-sm text-cyan-300">
-              Thumbnail
+              Thumbnail Image
             </label>
 
-            <button
-              type="button"
-              onClick={() =>
-                document.getElementById("thumbnail-upload")?.click()
-              }
-              className="w-full rounded-2xl border-2 border-dashed border-cyan-500/20 bg-black/30 p-10 text-center hover:border-cyan-400 transition-all duration-300"
-            >
-              <p className="text-white font-medium">
-                {thumbnail ? thumbnail.name : "Choose Thumbnail Image"}
-              </p>
-
-              <p className="text-sm text-gray-400 mt-2">PNG, JPG, WEBP</p>
-            </button>
-
             <input
-              id="thumbnail-upload"
               type="file"
               accept="image/*"
               onChange={(e) => setThumbnail(e.target.files?.[0] || null)}
-              className="hidden"
+              className="w-full bg-black/40 border border-cyan-500/20 rounded-xl px-4 py-3 outline-none focus:border-cyan-400"
             />
           </div>
 
-          {/* Film File */}
           <div className="mt-6">
             <label className="block mb-2 text-sm text-cyan-300">
               Film File
             </label>
 
-            <button
-              type="button"
-              onClick={() =>
-                document.getElementById("film-upload")?.click()
-              }
-              className="w-full rounded-2xl border-2 border-dashed border-cyan-500/20 bg-black/30 p-10 text-center hover:border-cyan-400 transition-all duration-300"
-            >
-              <p className="text-white font-medium">
-                {filmFile ? filmFile.name : "Choose Film File"}
-              </p>
-
-              <p className="text-sm text-gray-400 mt-2">MP4, MOV, AVI</p>
-            </button>
-
             <input
-              id="film-upload"
               type="file"
               accept="video/*"
               onChange={(e) => setFilmFile(e.target.files?.[0] || null)}
-              className="hidden"
+              className="w-full bg-black/40 border border-cyan-500/20 rounded-xl px-4 py-3 outline-none focus:border-cyan-400"
             />
           </div>
 
-          {/* Message */}
           {message && <p className="mt-6 text-sm text-cyan-300">{message}</p>}
 
-          {/* Button */}
           <div className="mt-8">
             <button
               onClick={handleUploadFilm}

@@ -1,5 +1,9 @@
 from fastapi import APIRouter, Header, HTTPException, UploadFile, File, Form
 from supabase import create_client
+from fastapi import Depends
+from sqlalchemy.orm import Session
+from database import get_db
+from models import Asset, User
 import os
 import uuid
 import json
@@ -7,7 +11,7 @@ import json
 router = APIRouter(prefix="/admin/assets", tags=["Admin Assets"])
 
 SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_KEY")
+SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY")
 SUPABASE_BUCKET = os.getenv("SUPABASE_BUCKET", "assets_previwe")
 
 supabase = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
@@ -21,7 +25,8 @@ def upload_asset(
     description: str = Form(""),
     price: float = Form(0),
     tags: str = Form("[]"),
-    file: UploadFile = File(...)
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
 ):
     if not authorization:
         raise HTTPException(status_code=401, detail="Missing token")
@@ -34,21 +39,16 @@ def upload_asset(
     if not auth_user:
         raise HTTPException(status_code=401, detail="Invalid token")
 
-    user_response = (
-        supabase
-        .table("users")
-        .select("id, role")
-        .eq("auth_user_id", auth_user.id)
-        .single()
-        .execute()
+    current_user = (
+        db.query(User)
+     .filter(User.auth_user_id == uuid.UUID(str(auth_user.id)))
+        .first()
     )
-
-    current_user = user_response.data
 
     if not current_user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    if current_user["role"] != "admin":
+    if current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Only admin can upload")
 
     file_ext = file.filename.split(".")[-1]
@@ -66,11 +66,9 @@ def upload_asset(
 
     preview_url = supabase.storage.from_(SUPABASE_BUCKET).get_public_url(file_name)
 
-    print("AUTH USER ID:", auth_user.id)
-    print("CURRENT USER:", current_user)
 
     asset_data = {
-        "user_id": current_user["id"],
+        "user_id": current_user.id,
         "name": name,
         "description": description,
         "category": category,
@@ -79,16 +77,20 @@ def upload_asset(
         "preview_url": preview_url,
         "bucket_path": file_name,
         "file_type": file_ext,
+        "file_size": len(file_bytes),
+        "price": price,
+        "source_type": "admin",
+        "status": "approved",
+        "rejection_reason": None,
     }
 
-    insert_response = (
-        supabase
-        .table("assets")
-        .insert(asset_data)
-        .execute()
-    )
+    new_asset = Asset(**asset_data)
+
+    db.add(new_asset)
+    db.commit()
+    db.refresh(new_asset)
 
     return {
         "message": "asset uploaded successfully",
-        "data": insert_response.data
+        "asset_id": new_asset.id
     }

@@ -329,7 +329,7 @@ export default function Films() {
 
                         {film.sourceType === "admin" && (
                           <NeonButton
-                            variant="secondary"
+                            variant="default"
                             size="sm"
                             onClick={() => openEditDialog(film)}
                           >
@@ -455,20 +455,22 @@ export default function Films() {
 
             <div className="flex gap-3">
               <NeonButton
-                variant="approve"
-                className="flex-1"
-                onClick={handleUpdateFilm}
-              >
-                Save
-              </NeonButton>
+                  variant="approve"
+                  size="sm"
+                  className="flex-1"
+                  onClick={handleUpdateFilm}
+                >
+                  Save
+                </NeonButton>
 
               <NeonButton
-                variant="reject"
-                className="flex-1"
-                onClick={() => setEditFilm(null)}
-              >
-                Cancel
-              </NeonButton>
+                  variant="reject"
+                  size="sm"
+                  className="flex-1"
+                  onClick={() => setEditFilm(null)}
+                >
+                  Cancel
+                </NeonButton>
             </div>
           </div>
         </div>

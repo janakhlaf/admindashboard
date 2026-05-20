@@ -12,6 +12,8 @@ from supabase import create_client
 
 from database import get_db
 from models import Film, Asset, User
+from routers.assets import router as assets_router
+from routers.films import router as films_router
 
 
 load_dotenv()
@@ -34,6 +36,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.include_router(assets_router)
+app.include_router(films_router)
 
 
 class AdminLogin(BaseModel):
@@ -96,210 +100,8 @@ def admin_login(data: AdminLogin, db: Session = Depends(get_db)):
     }
 
 
-@app.post("/admin/assets/upload")
-async def admin_upload_asset(
-    authorization: str = Header(None),
-    name: str = Form(...),
-    description: Optional[str] = Form(None),
-    category: Optional[str] = Form(None),
-    price: float = Form(0),
-    tags: Optional[str] = Form(None),
-    file: UploadFile = File(...),
-    db: Session = Depends(get_db),
-):
-    if not authorization:
-        raise HTTPException(status_code=401, detail="Missing token")
-
-    token = authorization.replace("Bearer ", "")
-
-    auth_user_response = supabase.auth.get_user(token)
-    auth_user = auth_user_response.user
-
-    if not auth_user:
-        raise HTTPException(status_code=401, detail="Invalid token")
-
-    current_user = (
-    db.query(User)
-    .filter(User.email == auth_user.email)
-    .first()
-)
-
-    if not current_user:
-        raise HTTPException(status_code=404, detail="User not found")
-
-    if current_user.role != "admin":
-        raise HTTPException(status_code=403, detail="Only admin can upload")
-
-    file_bytes = await file.read()
-
-    if not file_bytes:
-        raise HTTPException(status_code=400, detail="Uploaded file is empty")
-
-    file_extension = (
-        file.filename.split(".")[-1].lower()
-        if file.filename and "." in file.filename
-        else "glb"
-    )
-
-    unique_name = f"{uuid.uuid4()}.{file_extension}"
-    private_path = f"admin/{unique_name}"
-    preview_path = f"admin/{unique_name}"
-
-    content_type = file.content_type or "application/octet-stream"
-
-    if file_extension == "glb":
-        content_type = "model/gltf-binary"
-
-    if file_extension == "gltf":
-        content_type = "model/gltf+json"
-
-    try:
-        supabase.storage.from_("assets_private").upload(
-            private_path,
-            file_bytes,
-            {
-                "content-type": content_type,
-                "upsert": "true",
-            },
-        )
-
-        supabase.storage.from_("assets_previwe").upload(
-            preview_path,
-            file_bytes,
-            {
-                "content-type": content_type,
-                "upsert": "true",
-            },
-        )
-
-        preview_public_url = (
-            supabase.storage
-            .from_("assets_previwe")
-            .get_public_url(preview_path)
-        )
-
-    except Exception as error:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Supabase upload failed: {str(error)}",
-        )
-
-    parsed_tags = json.loads(tags) if tags else []
-
-    new_asset = Asset(
-        user_id=current_user.id,
-        name=name,
-        description=description,
-        category=category,
-        tags=parsed_tags,
-        preview_url=preview_public_url,
-        bucket_path=private_path,
-        file_type=file_extension,
-        file_size=len(file_bytes),
-        price=price,
-        source_type="admin",
-        status="approved",
-        rejection_reason=None,
-    )
-
-    db.add(new_asset)
-    db.commit()
-    db.refresh(new_asset)
-
-    return {
-        "message": "Admin asset uploaded successfully",
-        "asset": new_asset,
-    }
 
 
-@app.post("/admin/films/upload")
-async def admin_upload_film(
-    title: str = Form(...),
-    description: Optional[str] = Form(None),
-    category: Optional[str] = Form(None),
-    duration: Optional[str] = Form(None),
-    tags: Optional[str] = Form(None),
-    thumbnail: UploadFile = File(...),
-    film_file: UploadFile = File(...),
-    db: Session = Depends(get_db),
-):
-    thumbnail_bytes = await thumbnail.read()
-    film_bytes = await film_file.read()
-
-    thumbnail_extension = (
-        thumbnail.filename.split(".")[-1].lower()
-        if thumbnail.filename and "." in thumbnail.filename
-        else "png"
-    )
-
-    film_extension = (
-        film_file.filename.split(".")[-1].lower()
-        if film_file.filename and "." in film_file.filename
-        else "mp4"
-    )
-
-    thumbnail_path = f"films/{uuid.uuid4()}.{thumbnail_extension}"
-    film_path = f"films/{uuid.uuid4()}.{film_extension}"
-
-    try:
-        supabase.storage.from_("thumbnail_previw").upload(
-            thumbnail_path,
-            thumbnail_bytes,
-            {
-                "content-type": thumbnail.content_type or "image/png",
-                "upsert": "true",
-            },
-        )
-
-        thumbnail_public_url = (
-            supabase.storage
-            .from_("thumbnail_previw")
-            .get_public_url(thumbnail_path)
-        )
-
-        supabase.storage.from_("films_private").upload(
-            film_path,
-            film_bytes,
-            {
-                "content-type": film_file.content_type or "video/mp4",
-                "upsert": "true",
-            },
-        )
-
-    except Exception as error:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Film upload failed: {str(error)}",
-        )
-
-    parsed_tags = json.loads(tags) if tags else []
-
-    new_film = Film(
-        user_id=None,
-        title=title,
-        description=description,
-        category=category,
-        tags=parsed_tags,
-        thumbnail_url=thumbnail_public_url,
-        thumbnail_basic=thumbnail_public_url,
-        bucket_path=film_path,
-        mime_type=film_file.content_type or "video/mp4",
-        duration=duration,
-        file_size=f"{round(len(film_bytes) / 1024 / 1024, 2)} MB",
-        price=0,
-        source_type="admin",
-        status="approved",
-        rejection_reason=None,
-    )
-
-    db.add(new_film)
-    db.commit()
-    db.refresh(new_film)
-
-    return {
-        "message": "Film uploaded successfully",
-        "film": new_film,
-    }
 
 
 @app.put("/assets/{asset_id}")
@@ -324,6 +126,29 @@ def update_asset(
     return {
         "message": "Asset updated successfully",
         "asset": asset,
+    }
+@app.put("/films/{film_id}")
+def update_film(
+    film_id: int,
+    data: FilmUpdate,
+    db: Session = Depends(get_db),
+):
+    film = db.query(Film).filter(Film.id == film_id).first()
+
+    if not film:
+        raise HTTPException(status_code=404, detail="Film not found")
+
+    update_data = data.dict(exclude_unset=True)
+
+    for key, value in update_data.items():
+        setattr(film, key, value)
+
+    db.commit()
+    db.refresh(film)
+
+    return {
+        "message": "Film updated successfully",
+        "film": film,
     }
 
 
