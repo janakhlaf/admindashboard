@@ -1,5 +1,6 @@
-import { supabase } from "@/lib/supabase";
 import { useState } from "react";
+import { File } from "lucide-react";
+import { supabase } from "@/lib/supabase";
 
 const API_URL = "http://localhost:8000";
 
@@ -29,6 +30,8 @@ const FILM_TAGS = [
   "war",
 ];
 
+const VIDEO_EXTENSIONS = ["mp4", "mov", "webm", "avi", "mkv"];
+
 const UploadFilm = () => {
   const [title, setTitle] = useState("");
   const [genre, setGenre] = useState("");
@@ -39,12 +42,30 @@ const UploadFilm = () => {
   const [thumbnail, setThumbnail] = useState<File | null>(null);
   const [filmFile, setFilmFile] = useState<File | null>(null);
 
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
+  const [messageType, setMessageType] = useState<"success" | "error">(
+    "success"
+  );
+
+  const inputClass = (key: string) =>
+    `w-full bg-black/40 border rounded-xl px-4 py-3 outline-none text-white ${
+      errors[key]
+        ? "border-red-500 ring-1 ring-red-500"
+        : "border-cyan-500/20 focus:border-cyan-400"
+    }`;
 
   const handleAddTag = (tag: string) => {
+    if (!tag) return;
+
     if (!selectedTags.includes(tag) && selectedTags.length < 3) {
       setSelectedTags([...selectedTags, tag]);
+
+      setErrors((prev) => ({
+        ...prev,
+        tags: "",
+      }));
     }
   };
 
@@ -52,25 +73,56 @@ const UploadFilm = () => {
     setSelectedTags(selectedTags.filter((t) => t !== tag));
   };
 
-  const handleUploadFilm = async () => {
+  const validateForm = () => {
+    const newErrors: Record<string, string> = {};
+
     if (!title.trim()) {
-      setMessage("Film title is required");
-      return;
+      newErrors.title = "Film title is required";
+    }
+
+    if (!genre.trim()) {
+      newErrors.genre = "Category is required";
+    }
+
+    if (!description.trim()) {
+      newErrors.description = "Description is required";
+    }
+
+    if (!duration.trim()) {
+      newErrors.duration = "Duration is required";
+    }
+
+    if (selectedTags.length !== 3) {
+      newErrors.tags = "You must select exactly 3 tags";
     }
 
     if (!thumbnail) {
-      setMessage("Thumbnail image is required");
-      return;
+      newErrors.thumbnail = "Thumbnail image is required";
     }
 
     if (!filmFile) {
-      setMessage("Film file is required");
-      return;
+      newErrors.filmFile = "Film file is required";
+    } else {
+      const ext = filmFile.name.split(".").pop()?.toLowerCase();
+
+      if (!ext || !VIDEO_EXTENSIONS.includes(ext)) {
+        newErrors.filmFile =
+          "Only video files are allowed: mp4, mov, webm, avi, mkv";
+      }
     }
+
+    setErrors(newErrors);
+
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleUploadFilm = async () => {
+    setMessage("");
+
+    if (!validateForm()) return;
 
     try {
       setLoading(true);
-      setMessage("");
 
       const formData = new FormData();
 
@@ -79,8 +131,14 @@ const UploadFilm = () => {
       formData.append("description", description);
       formData.append("duration", duration);
       formData.append("tags", JSON.stringify(selectedTags));
-      formData.append("thumbnail", thumbnail);
-      formData.append("film_file", filmFile);
+
+      if (thumbnail) {
+        formData.append("thumbnail", thumbnail);
+      }
+
+      if (filmFile) {
+        formData.append("film_file", filmFile);
+      }
 
       const {
         data: { session },
@@ -99,9 +157,7 @@ const UploadFilm = () => {
       });
 
       if (!response.ok) {
-        const errorData = await response
-          .json()
-          .catch((_error: unknown): null => null);
+        const errorData = await response.json().catch((): null => null);
 
         throw new Error(errorData?.detail || "Failed to upload film");
       }
@@ -113,9 +169,13 @@ const UploadFilm = () => {
       setSelectedTags([]);
       setThumbnail(null);
       setFilmFile(null);
+      setErrors({});
 
+      setMessageType("success");
       setMessage("Film uploaded successfully to Storage and Database.");
     } catch (error) {
+      setMessageType("error");
+
       setMessage(
         error instanceof Error
           ? error.message
@@ -145,24 +205,50 @@ const UploadFilm = () => {
               <input
                 type="text"
                 value={title}
-                onChange={(e) => setTitle(e.target.value)}
+                onChange={(e) => {
+                  setTitle(e.target.value);
+
+                  setErrors((prev) => ({
+                    ...prev,
+                    title: "",
+                  }));
+                }}
                 placeholder="Enter film title"
-                className="w-full bg-black/40 border border-cyan-500/20 rounded-xl px-4 py-3 outline-none focus:border-cyan-400"
+                className={inputClass("title")}
               />
+
+              {errors.title && (
+                <p className="mt-1 text-xs text-red-400">
+                  {errors.title}
+                </p>
+              )}
             </div>
 
             <div>
               <label className="block mb-2 text-sm text-cyan-300">
-                Genre
+                Category
               </label>
 
               <input
                 type="text"
                 value={genre}
-                onChange={(e) => setGenre(e.target.value)}
+                onChange={(e) => {
+                  setGenre(e.target.value);
+
+                  setErrors((prev) => ({
+                    ...prev,
+                    genre: "",
+                  }));
+                }}
                 placeholder="Sci-Fi / Action / Drama..."
-                className="w-full bg-black/40 border border-cyan-500/20 rounded-xl px-4 py-3 outline-none focus:border-cyan-400"
+                className={inputClass("genre")}
               />
+
+              {errors.genre && (
+                <p className="mt-1 text-xs text-red-400">
+                  Category is required
+                </p>
+              )}
             </div>
           </div>
 
@@ -173,11 +259,24 @@ const UploadFilm = () => {
 
             <textarea
               value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              onChange={(e) => {
+                setDescription(e.target.value);
+
+                setErrors((prev) => ({
+                  ...prev,
+                  description: "",
+                }));
+              }}
               placeholder="Describe the film..."
               rows={5}
-              className="w-full bg-black/40 border border-cyan-500/20 rounded-xl px-4 py-3 outline-none focus:border-cyan-400"
+              className={inputClass("description")}
             />
+
+            {errors.description && (
+              <p className="mt-1 text-xs text-red-400">
+                {errors.description}
+              </p>
+            )}
           </div>
 
           <div className="mt-6">
@@ -188,21 +287,38 @@ const UploadFilm = () => {
             <input
               type="text"
               value={duration}
-              onChange={(e) => setDuration(e.target.value)}
+              onChange={(e) => {
+                setDuration(e.target.value);
+
+                setErrors((prev) => ({
+                  ...prev,
+                  duration: "",
+                }));
+              }}
               placeholder="10 min / 1h 20m..."
-              className="w-full bg-black/40 border border-cyan-500/20 rounded-xl px-4 py-3 outline-none focus:border-cyan-400"
+              className={inputClass("duration")}
             />
+
+            {errors.duration && (
+              <p className="mt-1 text-xs text-red-400">
+                {errors.duration}
+              </p>
+            )}
           </div>
 
           <div className="mt-6">
             <label className="block mb-2 text-sm text-cyan-300">
-              Tags (Select up to 3)
+              Tags (Select exactly 3)
             </label>
 
             <select
               value=""
               onChange={(e) => handleAddTag(e.target.value)}
-              className="w-full bg-black/40 border border-cyan-500/20 rounded-xl px-4 py-3 outline-none focus:border-cyan-400 text-white"
+              className={`w-full bg-black/40 border rounded-xl px-4 py-3 outline-none text-white ${
+                errors.tags
+                  ? "border-red-500 ring-1 ring-red-500"
+                  : "border-cyan-500/20 focus:border-cyan-400"
+              }`}
             >
               <option value="" disabled>
                 Choose tags
@@ -233,11 +349,17 @@ const UploadFilm = () => {
                     onClick={() => handleRemoveTag(tag)}
                     className="text-xs font-bold"
                   >
-                    ×
+                    ✕
                   </button>
                 </div>
               ))}
             </div>
+
+            {errors.tags && (
+              <p className="mt-1 text-xs text-red-400">
+                {errors.tags}
+              </p>
+            )}
           </div>
 
           <div className="mt-6">
@@ -245,12 +367,43 @@ const UploadFilm = () => {
               Thumbnail Image
             </label>
 
-            <input
-              type="file"
-              accept="image/*"
-              onChange={(e) => setThumbnail(e.target.files?.[0] || null)}
-              className="w-full bg-black/40 border border-cyan-500/20 rounded-xl px-4 py-3 outline-none focus:border-cyan-400"
-            />
+            <div
+              className={`border rounded-xl px-4 py-3 bg-black/40 ${
+                errors.thumbnail
+                  ? "border-red-500 ring-1 ring-red-500"
+                  : "border-cyan-500/20"
+              }`}
+            >
+              <input
+                type="file"
+                id="thumbnail-upload"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  setThumbnail(e.target.files?.[0] || null);
+
+                  setErrors((prev) => ({
+                    ...prev,
+                    thumbnail: "",
+                  }));
+                }}
+              />
+
+              <label
+                htmlFor="thumbnail-upload"
+                className="cursor-pointer text-sm text-gray-400 flex items-center gap-2"
+              >
+                <File className="w-4 h-4" />
+
+                {thumbnail ? thumbnail.name : "Choose File"}
+              </label>
+            </div>
+
+            {errors.thumbnail && (
+              <p className="mt-1 text-xs text-red-400">
+                {errors.thumbnail}
+              </p>
+            )}
           </div>
 
           <div className="mt-6">
@@ -258,15 +411,56 @@ const UploadFilm = () => {
               Film File
             </label>
 
-            <input
-              type="file"
-              accept="video/*"
-              onChange={(e) => setFilmFile(e.target.files?.[0] || null)}
-              className="w-full bg-black/40 border border-cyan-500/20 rounded-xl px-4 py-3 outline-none focus:border-cyan-400"
-            />
+            <div
+              className={`border rounded-xl px-4 py-3 bg-black/40 ${
+                errors.filmFile
+                  ? "border-red-500 ring-1 ring-red-500"
+                  : "border-cyan-500/20"
+              }`}
+            >
+              <input
+                type="file"
+                id="film-upload"
+                accept="video/*,.mp4,.mov,.webm,.avi,.mkv"
+                className="hidden"
+                onChange={(e) => {
+                  setFilmFile(e.target.files?.[0] || null);
+
+                  setErrors((prev) => ({
+                    ...prev,
+                    filmFile: "",
+                  }));
+                }}
+              />
+
+              <label
+                htmlFor="film-upload"
+                className="cursor-pointer text-sm text-gray-400 flex items-center gap-2"
+              >
+                <File className="w-4 h-4" />
+
+                {filmFile ? filmFile.name : "Choose File"}
+              </label>
+            </div>
+
+            {errors.filmFile && (
+              <p className="mt-1 text-xs text-red-400">
+                {errors.filmFile}
+              </p>
+            )}
           </div>
 
-          {message && <p className="mt-6 text-sm text-cyan-300">{message}</p>}
+          {message && (
+            <p
+              className={`mt-6 text-sm font-semibold border rounded-xl px-4 py-3 ${
+                messageType === "success"
+                  ? "text-green-400 bg-green-500/10 border-green-500/30"
+                  : "text-red-400 bg-red-500/10 border-red-500/30"
+              }`}
+            >
+              {message}
+            </p>
+          )}
 
           <div className="mt-8">
             <button

@@ -13,6 +13,8 @@ const ASSET_TAGS = [
   "food", "furniture", "campfire", "animated", "rigged", "game-ready",
 ];
 
+const ASSET_EXTENSIONS = ["glb", "gltf"];
+
 const UploadAsset = () => {
   const [assetName, setAssetName] = useState("");
   const [category, setCategory] = useState("");
@@ -21,12 +23,28 @@ const UploadAsset = () => {
   const [file, setFile] = useState<File | null>(null);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
 
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
+  const [messageType, setMessageType] = useState<"success" | "error">("success");
+
+  const inputClass = (key: string) =>
+    `w-full bg-black/40 border rounded-xl px-4 py-3 outline-none ${
+      errors[key]
+        ? "border-red-500 ring-1 ring-red-500"
+        : "border-cyan-500/20 focus:border-cyan-400"
+    }`;
+
+  const clearError = (key: string) => {
+    setErrors((prev) => ({ ...prev, [key]: "" }));
+  };
 
   const handleAddTag = (tag: string) => {
+    if (!tag) return;
+
     if (!selectedTags.includes(tag) && selectedTags.length < 3) {
       setSelectedTags([...selectedTags, tag]);
+      clearError("tags");
     }
   };
 
@@ -34,52 +52,71 @@ const UploadAsset = () => {
     setSelectedTags(selectedTags.filter((t) => t !== tag));
   };
 
-  const handleUploadAsset = async () => {
-    if (!assetName.trim()) {
-      setMessage("Asset name is required");
-      return;
+  const validateForm = () => {
+    const newErrors: Record<string, string> = {};
+
+    if (!assetName.trim()) newErrors.assetName = "Asset name is required";
+    if (!category.trim()) newErrors.category = "Category is required";
+    if (!description.trim()) newErrors.description = "Description is required";
+
+    if (!price || Number(price) <= 0) {
+      newErrors.price = "Price is required";
+    }
+
+    if (selectedTags.length !== 3) {
+      newErrors.tags = "You must select exactly 3 tags";
     }
 
     if (!file) {
-      setMessage("Asset file is required");
-      return;
+      newErrors.file = "Asset file is required";
+    } else {
+      const ext = file.name.split(".").pop()?.toLowerCase();
+
+      if (!ext || !ASSET_EXTENSIONS.includes(ext)) {
+        newErrors.file = "Only GLB or GLTF files are allowed";
+      }
     }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleUploadAsset = async () => {
+    setMessage("");
+
+    if (!validateForm()) return;
 
     try {
       setLoading(true);
-      setMessage("");
 
       const formData = new FormData();
+
       formData.append("name", assetName);
       formData.append("category", category);
       formData.append("description", description);
-      formData.append("price", price ? String(Number(price)) : "0");
+      formData.append("price", String(Number(price)));
       formData.append("tags", JSON.stringify(selectedTags));
-      formData.append("file", file);
 
-      
-      
-      
+      if (file) formData.append("file", file);
+
       const {
-          data: { session },
-        } = await supabase.auth.getSession();
+        data: { session },
+      } = await supabase.auth.getSession();
 
-        if (!session) {
-          throw new Error("You must be logged in");
-        }
+      if (!session) {
+        throw new Error("You must be logged in");
+      }
 
-        const response = await fetch(`${API_URL}/admin/assets/upload`, {
-          method: "POST",
-
-          headers: {
-            Authorization: `Bearer ${session.access_token}`,
-          },
-
-          body: formData,
-        });
+      const response = await fetch(`${API_URL}/admin/assets/upload`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: formData,
+      });
 
       if (!response.ok) {
-        const errorData = await response.json().catch((_error: unknown): null => null);
+        const errorData = await response.json().catch((): null => null);
         throw new Error(errorData?.detail || "Failed to upload asset");
       }
 
@@ -89,9 +126,12 @@ const UploadAsset = () => {
       setPrice("");
       setFile(null);
       setSelectedTags([]);
+      setErrors({});
 
+      setMessageType("success");
       setMessage("Asset uploaded successfully to Storage and Database.");
     } catch (error) {
+      setMessageType("error");
       setMessage(
         error instanceof Error
           ? error.message
@@ -121,10 +161,17 @@ const UploadAsset = () => {
               <input
                 type="text"
                 value={assetName}
-                onChange={(e) => setAssetName(e.target.value)}
+                onChange={(e) => {
+                  setAssetName(e.target.value);
+                  clearError("assetName");
+                }}
                 placeholder="Enter asset name"
-                className="w-full bg-black/40 border border-cyan-500/20 rounded-xl px-4 py-3 outline-none focus:border-cyan-400"
+                className={inputClass("assetName")}
               />
+
+              {errors.assetName && (
+                <p className="mt-1 text-xs text-red-400">{errors.assetName}</p>
+              )}
             </div>
 
             <div>
@@ -135,10 +182,17 @@ const UploadAsset = () => {
               <input
                 type="text"
                 value={category}
-                onChange={(e) => setCategory(e.target.value)}
+                onChange={(e) => {
+                  setCategory(e.target.value);
+                  clearError("category");
+                }}
                 placeholder="Environment / Character / Props..."
-                className="w-full bg-black/40 border border-cyan-500/20 rounded-xl px-4 py-3 outline-none focus:border-cyan-400"
+                className={inputClass("category")}
               />
+
+              {errors.category && (
+                <p className="mt-1 text-xs text-red-400">{errors.category}</p>
+              )}
             </div>
           </div>
 
@@ -149,22 +203,33 @@ const UploadAsset = () => {
 
             <textarea
               value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              onChange={(e) => {
+                setDescription(e.target.value);
+                clearError("description");
+              }}
               placeholder="Describe the asset..."
               rows={5}
-              className="w-full bg-black/40 border border-cyan-500/20 rounded-xl px-4 py-3 outline-none focus:border-cyan-400"
+              className={inputClass("description")}
             />
+
+            {errors.description && (
+              <p className="mt-1 text-xs text-red-400">{errors.description}</p>
+            )}
           </div>
 
           <div className="mt-6">
             <label className="block mb-2 text-sm text-cyan-300">
-              Tags (Select up to 3)
+              Tags (Select exactly 3)
             </label>
 
             <select
               value=""
               onChange={(e) => handleAddTag(e.target.value)}
-              className="w-full bg-black/40 border border-cyan-500/20 rounded-xl px-4 py-3 outline-none focus:border-cyan-400 text-white"
+              className={`w-full bg-black/40 border rounded-xl px-4 py-3 outline-none text-white ${
+                errors.tags
+                  ? "border-red-500 ring-1 ring-red-500"
+                  : "border-cyan-500/20 focus:border-cyan-400"
+              }`}
             >
               <option value="" disabled>
                 Choose tags
@@ -201,10 +266,8 @@ const UploadAsset = () => {
               ))}
             </div>
 
-            {selectedTags.length >= 3 && (
-              <p className="text-xs text-gray-400 mt-2">
-                Maximum 3 tags selected
-              </p>
+            {errors.tags && (
+              <p className="mt-1 text-xs text-red-400">{errors.tags}</p>
             )}
           </div>
 
@@ -216,10 +279,17 @@ const UploadAsset = () => {
             <input
               type="number"
               value={price}
-              onChange={(e) => setPrice(e.target.value)}
+              onChange={(e) => {
+                setPrice(e.target.value);
+                clearError("price");
+              }}
               placeholder="Enter asset price"
-              className="w-full bg-black/40 border border-cyan-500/20 rounded-xl px-4 py-3 outline-none focus:border-cyan-400"
+              className={inputClass("price")}
             />
+
+            {errors.price && (
+              <p className="mt-1 text-xs text-red-400">{errors.price}</p>
+            )}
           </div>
 
           <div className="mt-6">
@@ -227,26 +297,49 @@ const UploadAsset = () => {
               Asset File
             </label>
 
-            <div className="border-2 border-dashed border-cyan-500/20 rounded-2xl p-10 text-center bg-black/30">
+            <div
+              className={`border-2 border-dashed rounded-2xl p-10 text-center bg-black/30 ${
+                errors.file
+                  ? "border-red-500 ring-1 ring-red-500"
+                  : "border-cyan-500/20"
+              }`}
+            >
               <input
-              type="file"
-              id="asset-upload"
-              onChange={(e) => setFile(e.target.files?.[0] || null)}
-              className="hidden"
-            />
+                type="file"
+                id="asset-upload"
+                accept=".glb,.gltf"
+                onChange={(e) => {
+                  setFile(e.target.files?.[0] || null);
+                  clearError("file");
+                }}
+                className="hidden"
+              />
 
-            <label
-          htmlFor="asset-upload"
-          className="cursor-pointer text-sm text-gray-400 flex items-center justify-center gap-2"
-        >
-          <File className="w-4 h-4" />
-
-          {file ? file.name : "Choose File"}
-        </label>
+              <label
+                htmlFor="asset-upload"
+                className="cursor-pointer text-sm text-gray-400 flex items-center justify-center gap-2"
+              >
+                <File className="w-4 h-4" />
+                {file ? file.name : "Choose File"}
+              </label>
             </div>
+
+            {errors.file && (
+              <p className="mt-1 text-xs text-red-400">{errors.file}</p>
+            )}
           </div>
 
-          {message && <p className="mt-6 text-sm text-cyan-300">{message}</p>}
+          {message && (
+            <p
+              className={`mt-6 text-sm font-semibold border rounded-xl px-4 py-3 ${
+                messageType === "success"
+                  ? "text-green-400 bg-green-500/10 border-green-500/30"
+                  : "text-red-400 bg-red-500/10 border-red-500/30"
+              }`}
+            >
+              {message}
+            </p>
+          )}
 
           <div className="mt-8">
             <button
