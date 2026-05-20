@@ -18,6 +18,10 @@ class User(Base):
 
     role = Column(String)
 
+    auth_user_id = Column(String, unique=True)
+
+    profile_image = Column(Text)
+
 
 class Film(Base):
     __tablename__ = "films"

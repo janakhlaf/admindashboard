@@ -4,7 +4,7 @@ import uuid
 import json
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, Form
+from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, Form, Header
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -20,11 +20,12 @@ app = FastAPI(title="Admin Dashboard Backend")
 
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY")
 
-if not SUPABASE_URL or not SUPABASE_KEY:
-    raise RuntimeError("SUPABASE_URL or SUPABASE_KEY is missing in .env")
+if not SUPABASE_URL or not SUPABASE_SERVICE_KEY:
+    raise RuntimeError("SUPABASE_URL or SUPABASE_SERVICE_KEY is missing in .env")
 
-supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+supabase = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
 
 app.add_middleware(
     CORSMiddleware,
@@ -45,10 +46,6 @@ class FilmUpdate(BaseModel):
     description: Optional[str] = None
     category: Optional[str] = None
     price: Optional[float] = None
-    thumbnail_url: Optional[str] = None
-    bucket_path: Optional[str] = None
-    duration: Optional[str] = None
-    file_size: Optional[str] = None
 
 
 class AssetUpdate(BaseModel):
@@ -56,15 +53,26 @@ class AssetUpdate(BaseModel):
     description: Optional[str] = None
     category: Optional[str] = None
     price: Optional[float] = None
-    preview_url: Optional[str] = None
-    bucket_path: Optional[str] = None
-    file_type: Optional[str] = None
-    file_size: Optional[int] = None
 
 
 @app.get("/")
 def root():
     return {"message": "Admin backend is running"}
+
+
+@app.get("/films")
+def get_films(db: Session = Depends(get_db)):
+    return db.query(Film).all()
+
+
+@app.get("/assets")
+def get_assets(db: Session = Depends(get_db)):
+    return db.query(Asset).all()
+
+
+@app.get("/users")
+def get_users(db: Session = Depends(get_db)):
+    return db.query(User).all()
 
 
 @app.post("/admin/login")
@@ -88,44 +96,40 @@ def admin_login(data: AdminLogin, db: Session = Depends(get_db)):
     }
 
 
-@app.get("/films")
-def get_films(db: Session = Depends(get_db)):
-    return db.query(Film).all()
-
-
-@app.get("/assets")
-def get_assets(db: Session = Depends(get_db)):
-    return db.query(Asset).all()
-
-
-@app.get("/users")
-def get_users(db: Session = Depends(get_db)):
-    users = db.query(User).all()
-
-    return [
-        {
-            "id": user.id,
-            "name": getattr(user, "full_name", None)
-            or getattr(user, "name", None)
-            or getattr(user, "username", None)
-            or f"User {user.id}",
-            "email": getattr(user, "email", "") or "",
-            "avatar_url": getattr(user, "avatar_url", "") or "",
-        }
-        for user in users
-    ]
-
-
 @app.post("/admin/assets/upload")
 async def admin_upload_asset(
+    authorization: str = Header(None),
     name: str = Form(...),
     description: Optional[str] = Form(None),
     category: Optional[str] = Form(None),
     price: float = Form(0),
     tags: Optional[str] = Form(None),
     file: UploadFile = File(...),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Missing token")
+
+    token = authorization.replace("Bearer ", "")
+
+    auth_user_response = supabase.auth.get_user(token)
+    auth_user = auth_user_response.user
+
+    if not auth_user:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+    current_user = (
+    db.query(User)
+    .filter(User.email == auth_user.email)
+    .first()
+)
+
+    if not current_user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Only admin can upload")
+
     file_bytes = await file.read()
 
     if not file_bytes:
@@ -138,16 +142,16 @@ async def admin_upload_asset(
     )
 
     unique_name = f"{uuid.uuid4()}.{file_extension}"
-
     private_path = f"admin/{unique_name}"
     preview_path = f"admin/{unique_name}"
 
+    content_type = file.content_type or "application/octet-stream"
+
     if file_extension == "glb":
         content_type = "model/gltf-binary"
-    elif file_extension == "gltf":
+
+    if file_extension == "gltf":
         content_type = "model/gltf+json"
-    else:
-        content_type = file.content_type or "application/octet-stream"
 
     try:
         supabase.storage.from_("assets_private").upload(
@@ -183,25 +187,18 @@ async def admin_upload_asset(
     parsed_tags = json.loads(tags) if tags else []
 
     new_asset = Asset(
-        user_id=None,
-
+        user_id=current_user.id,
         name=name,
         description=description,
         category=category,
-
         tags=parsed_tags,
-
         preview_url=preview_public_url,
         bucket_path=private_path,
-
         file_type=file_extension,
         file_size=len(file_bytes),
-
         price=price,
-
         source_type="admin",
         status="approved",
-
         rejection_reason=None,
     )
 
@@ -222,26 +219,12 @@ async def admin_upload_film(
     category: Optional[str] = Form(None),
     duration: Optional[str] = Form(None),
     tags: Optional[str] = Form(None),
-
     thumbnail: UploadFile = File(...),
     film_file: UploadFile = File(...),
-
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     thumbnail_bytes = await thumbnail.read()
     film_bytes = await film_file.read()
-
-    if not thumbnail_bytes:
-        raise HTTPException(
-            status_code=400,
-            detail="Thumbnail is empty",
-        )
-
-    if not film_bytes:
-        raise HTTPException(
-            status_code=400,
-            detail="Film file is empty",
-        )
 
     thumbnail_extension = (
         thumbnail.filename.split(".")[-1].lower()
@@ -255,21 +238,15 @@ async def admin_upload_film(
         else "mp4"
     )
 
-    unique_thumbnail_name = f"{uuid.uuid4()}.{thumbnail_extension}"
-    unique_film_name = f"{uuid.uuid4()}.{film_extension}"
-
-    thumbnail_path = f"films/{unique_thumbnail_name}"
-    film_path = f"films/{unique_film_name}"
-
-    thumbnail_content_type = thumbnail.content_type or "image/png"
-    film_content_type = film_file.content_type or "video/mp4"
+    thumbnail_path = f"films/{uuid.uuid4()}.{thumbnail_extension}"
+    film_path = f"films/{uuid.uuid4()}.{film_extension}"
 
     try:
         supabase.storage.from_("thumbnail_previw").upload(
             thumbnail_path,
             thumbnail_bytes,
             {
-                "content-type": thumbnail_content_type,
+                "content-type": thumbnail.content_type or "image/png",
                 "upsert": "true",
             },
         )
@@ -284,7 +261,7 @@ async def admin_upload_film(
             film_path,
             film_bytes,
             {
-                "content-type": film_content_type,
+                "content-type": film_file.content_type or "video/mp4",
                 "upsert": "true",
             },
         )
@@ -299,30 +276,19 @@ async def admin_upload_film(
 
     new_film = Film(
         user_id=None,
-
         title=title,
         description=description,
         category=category,
-
         tags=parsed_tags,
-
         thumbnail_url=thumbnail_public_url,
         thumbnail_basic=thumbnail_public_url,
-
         bucket_path=film_path,
-
-        mime_type=film_content_type,
-
+        mime_type=film_file.content_type or "video/mp4",
         duration=duration,
-
         file_size=f"{round(len(film_bytes) / 1024 / 1024, 2)} MB",
-
         price=0,
-
         source_type="admin",
-
         status="approved",
-
         rejection_reason=None,
     )
 
@@ -336,49 +302,11 @@ async def admin_upload_film(
     }
 
 
-@app.put("/films/{film_id}")
-def update_film(
-    film_id: int,
-    data: FilmUpdate,
-    db: Session = Depends(get_db)
-):
-    film = db.query(Film).filter(Film.id == film_id).first()
-
-    if not film:
-        raise HTTPException(status_code=404, detail="Film not found")
-
-    update_data = data.dict(exclude_unset=True)
-
-    for key, value in update_data.items():
-        setattr(film, key, value)
-
-    db.commit()
-    db.refresh(film)
-
-    return {
-        "message": "Film updated successfully",
-        "film": film,
-    }
-
-
-@app.delete("/films/{film_id}")
-def delete_film(film_id: int, db: Session = Depends(get_db)):
-    film = db.query(Film).filter(Film.id == film_id).first()
-
-    if not film:
-        raise HTTPException(status_code=404, detail="Film not found")
-
-    db.delete(film)
-    db.commit()
-
-    return {"message": "Film deleted successfully"}
-
-
 @app.put("/assets/{asset_id}")
 def update_asset(
     asset_id: int,
     data: AssetUpdate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     asset = db.query(Asset).filter(Asset.id == asset_id).first()
 

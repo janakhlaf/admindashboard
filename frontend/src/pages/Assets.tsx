@@ -346,7 +346,7 @@ export default function Assets() {
 
                       {asset.sourceType === "Admin Upload" && (
                         <NeonButton
-                          variant="secondary"
+                          variant="default"
                           size="sm"
                           onClick={() => openEditDialog(asset)}
                           className="w-full"
@@ -455,6 +455,7 @@ export default function Assets() {
             <div className="flex gap-3">
               <NeonButton
                 variant="approve"
+                size="sm"
                 className="flex-1"
                 onClick={handleUpdateAsset}
               >
@@ -463,6 +464,7 @@ export default function Assets() {
 
               <NeonButton
                 variant="reject"
+                size="sm"
                 className="flex-1"
                 onClick={() => setEditAsset(null)}
               >

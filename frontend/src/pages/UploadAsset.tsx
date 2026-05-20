@@ -78,7 +78,7 @@ const UploadAsset = () => {
         });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => null);
+        const errorData = await response.json().catch((_error: unknown): null => null);
         throw new Error(errorData?.detail || "Failed to upload asset");
       }
 
