@@ -4,9 +4,11 @@ from fastapi import Depends
 from sqlalchemy.orm import Session
 from database import get_db
 from models import Asset, User
+from embedding_service import generate_asset_embedding
 import os
 import uuid
 import json
+
 
 router = APIRouter(prefix="/admin/assets", tags=["Admin Assets"])
 
@@ -89,6 +91,7 @@ def upload_asset(
     db.add(new_asset)
     db.commit()
     db.refresh(new_asset)
+    generate_asset_embedding(db, new_asset)
 
     return {
         "message": "asset uploaded successfully",

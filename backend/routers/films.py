@@ -4,6 +4,7 @@ from fastapi import Depends
 from sqlalchemy.orm import Session
 from database import get_db
 from models import Film, User
+from embedding_service import generate_film_embedding
 import os
 import uuid
 import json
@@ -106,6 +107,7 @@ def upload_film(
     db.add(new_film)
     db.commit()
     db.refresh(new_film)
+    generate_film_embedding(db, new_film)
 
     return {
         "message": "film uploaded successfully",
