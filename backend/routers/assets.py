@@ -87,7 +87,7 @@ def upload_asset(
         "preview_url": preview_url,
         "bucket_path": file_name,
         "file_type": file_ext,
-        "file_size": len(file_bytes),
+        "file_size": f"{round(len(file_bytes) / 1024 / 1024, 2)} MB",
         "price": price,
         "source_type": "admin",
         "status": "approved",

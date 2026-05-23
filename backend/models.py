@@ -71,7 +71,7 @@ class Asset(Base):
     bucket_path = Column(Text)
 
     file_type = Column(String)
-    file_size = Column(BigInteger)
+    file_size = Column(String)
 
     price = Column(Numeric)
 

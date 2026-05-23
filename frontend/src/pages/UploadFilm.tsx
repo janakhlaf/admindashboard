@@ -39,7 +39,6 @@ const UploadFilm = () => {
   const [title, setTitle] = useState("");
   const [genre, setGenre] = useState("");
   const [description, setDescription] = useState("");
-  const [duration, setDuration] = useState("");
   const [price, setPrice] = useState("");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
 
@@ -92,10 +91,6 @@ const UploadFilm = () => {
       newErrors.description = "Description is required";
     }
 
-    if (!duration.trim()) {
-      newErrors.duration = "Duration is required";
-    }
-
     if (selectedTags.length !== 3) {
       newErrors.tags = "You must select exactly 3 tags";
     }
@@ -133,7 +128,6 @@ const UploadFilm = () => {
       formData.append("title", title);
       formData.append("category", genre);
       formData.append("description", description);
-      formData.append("duration", duration);
       formData.append("price", price);
       formData.append("tags", JSON.stringify(selectedTags));
 
@@ -170,7 +164,6 @@ const UploadFilm = () => {
       setTitle("");
       setGenre("");
       setDescription("");
-      setDuration("");
       setPrice("");
       setSelectedTags([]);
       setThumbnail(null);
@@ -285,32 +278,6 @@ const UploadFilm = () => {
             )}
           </div>
 
-          <div className="mt-6">
-            <label className="block mb-2 text-sm text-cyan-300">
-              Duration
-            </label>
-
-            <input
-              type="text"
-              value={duration}
-              onChange={(e) => {
-                setDuration(e.target.value);
-
-                setErrors((prev) => ({
-                  ...prev,
-                  duration: "",
-                }));
-              }}
-              placeholder="10 min / 1h 20m..."
-              className={inputClass("duration")}
-            />
-
-            {errors.duration && (
-              <p className="mt-1 text-xs text-red-400">
-                {errors.duration}
-              </p>
-            )}
-          </div>
           <div className="mt-6">
           <label className="block mb-2 text-sm text-cyan-300">
             Price

@@ -5,6 +5,8 @@ from sqlalchemy.orm import Session
 from database import get_db
 from models import Film, User
 from embedding_service import generate_film_embedding
+import tempfile
+from moviepy import VideoFileClip
 import os
 import uuid
 import json
@@ -19,6 +21,16 @@ FILMS_BUCKET = os.getenv("FILMS_BUCKET", "films_private")
 
 supabase = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
 
+def format_duration(seconds: float):
+    total_seconds = int(seconds)
+    hours = total_seconds // 3600
+    minutes = (total_seconds % 3600) // 60
+
+    if hours > 0:
+        return f"{hours}h {minutes}m"
+
+    return f"{minutes} min"
+
 
 @router.post("/upload")
 def upload_film(
@@ -26,7 +38,6 @@ def upload_film(
     title: str = Form(...),
     category: str = Form(""),
     description: str = Form(""),
-    duration: str = Form(""),
     price: float = Form(0),
     tags: str = Form("[]"),
     thumbnail: UploadFile = File(...),
@@ -63,6 +74,16 @@ def upload_film(
 
     thumbnail_bytes = thumbnail.file.read()
     film_bytes = film_file.file.read()
+
+    with tempfile.NamedTemporaryFile(delete=False, suffix=f".{film_ext}") as temp_video:
+        temp_video.write(film_bytes)
+        temp_video_path = temp_video.name
+
+    video_clip = VideoFileClip(temp_video_path)
+    duration = format_duration(video_clip.duration)
+    video_clip.close()
+
+    os.remove(temp_video_path)
 
     supabase.storage.from_(THUMBNAIL_BUCKET).upload(
         thumbnail_name,

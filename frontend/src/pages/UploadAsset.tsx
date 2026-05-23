@@ -10,7 +10,7 @@ const ASSET_TAGS = [
   "boy", "girl", "robot", "mech", "machine", "drone", "vehicle", "car",
   "aircraft", "racing", "environment", "city", "nature", "forest",
   "interior", "architecture", "building", "urban", "prop", "weapon",
-  "food", "furniture", "campfire", "animated", "rigged", "game-ready",
+  "food", "furniture", "campfire", "animated", "rigged" ,"infrastructure", "game-ready",
 ];
 
 const ASSET_EXTENSIONS = ["glb", "gltf"];
