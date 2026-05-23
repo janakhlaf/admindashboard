@@ -14,7 +14,8 @@ router = APIRouter(prefix="/admin/assets", tags=["Admin Assets"])
 
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY")
-SUPABASE_BUCKET = os.getenv("SUPABASE_BUCKET", "assets_previwe")
+PREVIEW_BUCKET = os.getenv("ASSETS_PREVIEW_BUCKET", "assets_previwe")
+PRIVATE_BUCKET = os.getenv("ASSETS_PRIVATE_BUCKET", "assets_private")
 
 supabase = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
 
@@ -58,15 +59,22 @@ def upload_asset(
 
     file_bytes = file.file.read()
 
-    supabase.storage.from_(SUPABASE_BUCKET).upload(
+    supabase.storage.from_(PREVIEW_BUCKET).upload(
         file_name,
         file_bytes,
         {
             "content-type": file.content_type
         }
     )
+    supabase.storage.from_(PRIVATE_BUCKET).upload(
+    file_name,
+    file_bytes,
+    {
+        "content-type": file.content_type
+    }
+)
 
-    preview_url = supabase.storage.from_(SUPABASE_BUCKET).get_public_url(file_name)
+    preview_url = supabase.storage.from_(PREVIEW_BUCKET).get_public_url(file_name)
 
 
     asset_data = {

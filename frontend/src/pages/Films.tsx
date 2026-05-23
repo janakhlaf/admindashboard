@@ -67,7 +67,10 @@ export default function Films() {
             film.created_at ||
             film.upload_date ||
             new Date().toISOString(),
-          size: Number(film.file_size) || 0,
+          size:
+            typeof film.file_size === "string"
+              ? film.file_size
+              : Number(film.file_size) || 0,
           status: film.status || "pending",
           thumbnail:
             film.posterUrl ||
@@ -304,7 +307,11 @@ export default function Films() {
                         <div className="flex items-center justify-between">
                           <span>Size:</span>
                           <span className="text-xs">
-                            {formatBytes(film.size)}
+                            {
+                              typeof film.size === "string"
+                                ? film.size
+                                : formatBytes(film.size)
+                            }
                           </span>
                         </div>
                       </div>

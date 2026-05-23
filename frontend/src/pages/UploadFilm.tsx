@@ -24,8 +24,11 @@ const FILM_TAGS = [
   "romance",
   "sci-fi",
   "space",
+  "racing",
+  "food",
   "superhero",
   "survival",
+  "robot",
   "thriller",
   "war",
 ];
@@ -37,6 +40,7 @@ const UploadFilm = () => {
   const [genre, setGenre] = useState("");
   const [description, setDescription] = useState("");
   const [duration, setDuration] = useState("");
+  const [price, setPrice] = useState("");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
 
   const [thumbnail, setThumbnail] = useState<File | null>(null);
@@ -130,6 +134,7 @@ const UploadFilm = () => {
       formData.append("category", genre);
       formData.append("description", description);
       formData.append("duration", duration);
+      formData.append("price", price);
       formData.append("tags", JSON.stringify(selectedTags));
 
       if (thumbnail) {
@@ -166,6 +171,7 @@ const UploadFilm = () => {
       setGenre("");
       setDescription("");
       setDuration("");
+      setPrice("");
       setSelectedTags([]);
       setThumbnail(null);
       setFilmFile(null);
@@ -305,6 +311,19 @@ const UploadFilm = () => {
               </p>
             )}
           </div>
+          <div className="mt-6">
+          <label className="block mb-2 text-sm text-cyan-300">
+            Price
+          </label>
+
+          <input
+            type="number"
+            value={price}
+            onChange={(e) => setPrice(e.target.value)}
+            placeholder="Enter film price"
+            className={inputClass("price")}
+          />
+         </div>
 
           <div className="mt-6">
             <label className="block mb-2 text-sm text-cyan-300">
