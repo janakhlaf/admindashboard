@@ -11,8 +11,8 @@ export const getFilms = async () => {
 };
 
 export const approveFilm = async (filmId: number) => {
-  const response = await fetch(`${API_URL}/films/${filmId}/approve`, {
-    method: "PATCH",
+  const response = await fetch(`${API_URL}/admin/films/approve/${filmId}`, {
+    method: "POST",
   });
 
   if (!response.ok) {
@@ -23,8 +23,8 @@ export const approveFilm = async (filmId: number) => {
 };
 
 export const rejectFilm = async (filmId: number) => {
-  const response = await fetch(`${API_URL}/films/${filmId}/reject`, {
-    method: "PATCH",
+  const response = await fetch(`${API_URL}/admin/films/reject/${filmId}`, {
+    method: "DELETE",
   });
 
   if (!response.ok) {
@@ -35,7 +35,7 @@ export const rejectFilm = async (filmId: number) => {
 };
 
 export const deleteFilm = async (filmId: number) => {
-  const response = await fetch(`${API_URL}/films/${filmId}`, {
+  const response = await fetch(`${API_URL}/admin/films/${filmId}`, {
     method: "DELETE",
   });
 

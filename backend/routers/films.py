@@ -135,4 +135,110 @@ def upload_film(
         "film_id": new_film.id
     }
 
+@router.post("/approve/{film_id}")
+def approve_film(film_id: int, db: Session = Depends(get_db)):
+
+    film = db.query(Film).filter(Film.id == film_id).first()
+
+    if not film:
+        raise HTTPException(status_code=404, detail="Film not found")
+
+    film.status = "approved"
+    film.rejection_reason = None
+    user = db.query(User).filter(User.id == film.user_id).first()
+
+    import requests
+
+    if user and user.email:
+
+        requests.post(
+            "https://aqfjcdjqjxuqgyyzrvpf.supabase.co/functions/v1/send-review-email",
+            json={
+                "to": user.email,
+                "subject": "Film Approved",
+                "message": f"Hello {user.full_name}, your film '{film.title}' has been approved successfully."
+            },
+            headers={
+            "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFxZmpjZGpxanh1cWd5eXpydnBmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcyODkwNDgsImV4cCI6MjA5Mjg2NTA0OH0.hRtKUByUAxldUSLpc3hmakiDKiPRCkg7TykEE_reXGI",
+    
+                
+                "Content-Type": "application/json"
+            }
+        )
+    db.commit()
+
+    return {
+        "message": "Film approved successfully"
+    }
+
+
+@router.delete("/reject/{film_id}")
+def reject_film(film_id: int, db: Session = Depends(get_db)):
+
+    film = db.query(Film).filter(Film.id == film_id).first()
+
+    if not film:
+        raise HTTPException(status_code=404, detail="Film not found")
+
+    if film.bucket_path:
+        supabase.storage.from_(FILMS_BUCKET).remove([film.bucket_path])
+
+    if film.thumbnail_url:
+        marker = f"/{THUMBNAIL_BUCKET}/"
+
+        if marker in film.thumbnail_url:
+            thumbnail_path = film.thumbnail_url.split(marker)[-1]
+
+            supabase.storage.from_(THUMBNAIL_BUCKET).remove([thumbnail_path])
+            
+    user = db.query(User).filter(User.id == film.user_id).first()
+
+    import requests
+
+    if user and user.email:
+
+        requests.post(
+            "https://aqfjcdjqjxuqgyyzrvpf.supabase.co/functions/v1/send-review-email",
+            json={
+                "to": user.email,
+                "subject": "Film Rejected",
+                "message": f"Hello {user.full_name}, your film '{film.title}' has been rejected."
+            },
+            headers={
+                "Content-Type": "application/json"
+            }
+        )
+    db.delete(film)
+    db.commit()
+
+    return {
+        "message": "Film rejected and deleted successfully"
+    }
+
+@router.delete("/{film_id}")
+def delete_film(film_id: int, db: Session = Depends(get_db)):
+
+    film = db.query(Film).filter(Film.id == film_id).first()
+
+    if not film:
+        raise HTTPException(status_code=404, detail="Film not found")
+
+    if film.bucket_path:
+        supabase.storage.from_(FILMS_BUCKET).remove([film.bucket_path])
+
+    if film.thumbnail_url:
+        marker = f"/{THUMBNAIL_BUCKET}/"
+
+        if marker in film.thumbnail_url:
+            thumbnail_path = film.thumbnail_url.split(marker)[-1]
+
+            supabase.storage.from_(THUMBNAIL_BUCKET).remove([thumbnail_path])
+
+    db.delete(film)
+    db.commit()
+
+    return {
+        "message": "Film deleted successfully"
+    }
+
 

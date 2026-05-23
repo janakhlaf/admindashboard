@@ -349,18 +349,21 @@ export default function Films() {
                           </NeonButton>
                         )}
 
-                        <NeonButton
-                          variant="delete"
-                          size="sm"
-                          onClick={() =>
-                            setDeleteDialog({
-                              open: true,
-                              filmId: film.id,
-                            })
-                          }
-                        >
-                          Delete
-                        </NeonButton>
+                        {film.status === "approved" && (
+                          <NeonButton
+                            variant="reject"
+                            size="sm"
+                            onClick={() =>
+                              setDeleteDialog({
+                                open: true,
+                                filmId: film.id,
+                              })
+                            }
+                            className="flex-1"
+                          >
+                            Delete
+                          </NeonButton>
+                        )}
                       </div>
                     </div>
                   </div>
