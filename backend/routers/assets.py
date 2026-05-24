@@ -8,6 +8,7 @@ from embedding_service import generate_asset_embedding
 import os
 import uuid
 import json
+import requests
 
 
 router = APIRouter(prefix="/admin/assets", tags=["Admin Assets"])
@@ -105,3 +106,91 @@ def upload_asset(
         "message": "asset uploaded successfully",
         "asset_id": new_asset.id
     }
+
+@router.patch("/{asset_id}/approve")
+def approve_asset(asset_id: int, db: Session = Depends(get_db)):
+
+    asset = db.query(Asset).filter(Asset.id == asset_id).first()
+
+    if not asset:
+        raise HTTPException(status_code=404, detail="Asset not found")
+
+    asset.status = "approved"
+
+    user = db.query(User).filter(User.id == asset.user_id).first()
+
+    if user and user.email:
+        requests.post(
+            "https://aqfjcdjqjxuqgyyzrvpf.supabase.co/functions/v1/send-review-email",
+            json={
+                "to": user.email,
+                "subject": "Human Mind & AI Logic | Asset Approved",
+                "message": f"""
+<div style="font-family: Arial, sans-serif; line-height:1.8; color:#222; background:#f7f7f7; padding:30px; border-radius:12px;">
+<h2 style="color:#00bcd4;">Asset Approved Successfully</h2>
+<p>Hello {user.full_name},</p>
+<p>Great news! Your asset <b>"{asset.name}"</b> has been approved and is now live on <b>Human Mind & AI Logic</b>.</p>
+<p>Thank you for sharing your creativity with our platform.</p>
+<br>
+<p style="color:#777;">— Human Mind & AI Logic Team</p>
+</div>
+"""
+            },
+            headers={
+                "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFxZmpjZGpxanh1cWd5eXpydnBmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcyODkwNDgsImV4cCI6MjA5Mjg2NTA0OH0.hRtKUByUAxldUSLpc3hmakiDKiPRCkg7TykEE_reXGI",
+                "Content-Type": "application/json"
+            }
+        )
+
+    db.commit()
+
+    return {"message": "Asset approved successfully"}
+
+
+@router.patch("/{asset_id}/reject")
+def reject_asset(asset_id: int, db: Session = Depends(get_db)):
+
+    asset = db.query(Asset).filter(Asset.id == asset_id).first()
+
+    if not asset:
+        raise HTTPException(status_code=404, detail="Asset not found")
+
+    user = db.query(User).filter(User.id == asset.user_id).first()
+
+    if user and user.email:
+        requests.post(
+            "https://aqfjcdjqjxuqgyyzrvpf.supabase.co/functions/v1/send-review-email",
+            json={
+                "to": user.email,
+                "subject": "Human Mind & AI Logic | Asset Not Approved",
+                "message": f"""
+<div style="font-family: Arial, sans-serif; line-height:1.8; color:#222; background:#f7f7f7; padding:30px; border-radius:12px;">
+<h2 style="color:#ff4d6d;">Asset Submission Not Approved</h2>
+<p>Hello {user.full_name},</p>
+<p>We appreciate your submission to <b>Human Mind & AI Logic</b>.</p>
+<p>Unfortunately, your asset <b>"{asset.name}"</b> was not approved during the review process.</p>
+<p>You can improve the submission and upload it again anytime.</p>
+<br>
+<p style="color:#777;">— Human Mind & AI Logic Team</p>
+</div>
+"""
+            },
+            headers={
+                "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFxZmpjZGpxanh1cWd5eXpydnBmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcyODkwNDgsImV4cCI6MjA5Mjg2NTA0OH0.hRtKUByUAxldUSLpc3hmakiDKiPRCkg7TykEE_reXGI",
+                "Content-Type": "application/json"
+            }
+        )
+
+    if asset.bucket_path:
+        supabase.storage.from_(PRIVATE_BUCKET).remove([asset.bucket_path])
+
+    if asset.preview_url:
+        marker = f"/{PREVIEW_BUCKET}/"
+        if marker in asset.preview_url:
+            preview_path = asset.preview_url.split(marker)[-1]
+            supabase.storage.from_(PREVIEW_BUCKET).remove([preview_path])
+
+    db.delete(asset)
+    db.commit()
+
+    return {"message": "Asset rejected and deleted successfully"}
