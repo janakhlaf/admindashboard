@@ -11,7 +11,7 @@ export const getAssets = async () => {
 };
 
 export const approveAsset = async (assetId: number) => {
-  const response = await fetch(`${API_URL}/assets/${assetId}/approve`, {
+  const response = await fetch(`${API_URL}/admin/assets/${assetId}/approve`, {
     method: "PATCH",
   });
 
@@ -23,7 +23,7 @@ export const approveAsset = async (assetId: number) => {
 };
 
 export const rejectAsset = async (assetId: number) => {
-  const response = await fetch(`${API_URL}/assets/${assetId}/reject`, {
+  const response = await fetch(`${API_URL}/admin/assets/${assetId}/reject`, {
     method: "PATCH",
   });
 

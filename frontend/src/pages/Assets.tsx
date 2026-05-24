@@ -359,14 +359,16 @@ const matchesSearch =
                         </NeonButton>
                       )}
 
-                      <NeonButton
-                        variant="delete"
-                        size="sm"
-                        onClick={() => openDeleteDialog(asset)}
-                        className="w-full"
-                      >
-                        Delete
-                      </NeonButton>
+                      {asset.status === "approved" && (
+                        <NeonButton
+                          variant="delete"
+                          size="sm"
+                          onClick={() => openDeleteDialog(asset)}
+                          className="w-full"
+                        >
+                          Delete
+                        </NeonButton>
+                      )}
                     </div>
                   </div>
                 </div>
