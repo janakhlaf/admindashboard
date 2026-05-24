@@ -31,6 +31,7 @@ const FILM_TAGS = [
   "robot",
   "thriller",
   "war",
+  "animals",
 ];
 
 const VIDEO_EXTENSIONS = ["mp4", "mov", "webm", "avi", "mkv"];
