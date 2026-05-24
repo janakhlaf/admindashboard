@@ -151,20 +151,46 @@ def approve_film(film_id: int, db: Session = Depends(get_db)):
 
     if user and user.email:
 
-        requests.post(
-            "https://aqfjcdjqjxuqgyyzrvpf.supabase.co/functions/v1/send-review-email",
-            json={
-                "to": user.email,
-                "subject": "Film Approved",
-                "message": f"Hello {user.full_name}, your film '{film.title}' has been approved successfully."
-            },
-            headers={
+        email_response = requests.post(
+        "https://aqfjcdjqjxuqgyyzrvpf.supabase.co/functions/v1/send-review-email",
+        json={
+            "to": user.email,
+            "subject": "Human Mind & AI Logic | Film Approved",
+            "message": f"""
+            <div style="font-family: Arial, sans-serif; line-height:1.8; color:#ffffff; background:#0b0b0b; padding:30px; border-radius:12px;">
+
+            <h2 style="color:#00d4ff; margin-bottom:20px;">
+            🎬 Film Approved Successfully
+            </h2>
+
+            <p>Hello {user.full_name},</p>
+
+            <p>
+            Great news! Your film
+            <b>"{film.title}"</b>
+            has been approved and is now live on
+            <b>Human Mind & AI Logic</b>.
+            </p>
+
+            <p>
+            Thank you for sharing your creativity with our platform.
+            </p>
+
+            <br>
+
+            <p style="color:#999;">
+            — Human Mind & AI Logic Team
+            </p>
+
+            </div>
+            """
+        },
+        headers={
             "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFxZmpjZGpxanh1cWd5eXpydnBmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcyODkwNDgsImV4cCI6MjA5Mjg2NTA0OH0.hRtKUByUAxldUSLpc3hmakiDKiPRCkg7TykEE_reXGI",
-    
-                
-                "Content-Type": "application/json"
-            }
-        )
+            "Content-Type": "application/json"
+        }
+    )
+
     db.commit()
 
     return {
@@ -201,14 +227,47 @@ def reject_film(film_id: int, db: Session = Depends(get_db)):
             "https://aqfjcdjqjxuqgyyzrvpf.supabase.co/functions/v1/send-review-email",
             json={
                 "to": user.email,
-                "subject": "Film Rejected",
-                "message": f"Hello {user.full_name}, your film '{film.title}' has been rejected."
+                "subject": "Human Mind & AI Logic | Film Rejected",
+                "message": f"""
+                <div style="font-family: Arial, sans-serif; line-height:1.8; color:#ffffff; background:#0b0b0b; padding:30px; border-radius:12px;">
+
+                <h2 style="color:#ff4d6d; margin-bottom:20px;">
+                Submission Not Approved
+                </h2>
+
+                <p>Hello {user.full_name},</p>
+
+                <p>
+                We appreciate your submission to
+                <b>Human Mind & AI Logic</b>.
+                </p>
+
+                <p>
+                Unfortunately, your film
+                <b>"{film.title}"</b>
+                was not approved during the review process.
+                </p>
+
+                <p>
+                You can improve the submission and upload it again anytime.
+                </p>
+
+                <br>
+
+                <p style="color:#999;">
+                — Human Mind & AI Logic Team
+                </p>
+
+                </div>
+                """
             },
             headers={
+                "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFxZmpjZGpxanh1cWd5eXpydnBmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcyODkwNDgsImV4cCI6MjA5Mjg2NTA0OH0.hRtKUByUAxldUSLpc3hmakiDKiPRCkg7TykEE_reXGI",
                 "Content-Type": "application/json"
             }
         )
     db.delete(film)
+    
     db.commit()
 
     return {
