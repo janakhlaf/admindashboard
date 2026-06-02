@@ -18,7 +18,9 @@ export default function AdminSlider() {
       .select("*")
       .order("id", { ascending: false });
 
-    if (!error) {
+    if (error) {
+      console.log("FETCH ERROR:", error);
+    } else {
       setSlides(data);
     }
 
@@ -32,38 +34,45 @@ export default function AdminSlider() {
   // =====================
   // UPLOAD SLIDE
   // =====================
-  async function uploadSlide() {
-    if (!file) return alert("Please select a file");
+  const uploadSlide = async () => {
+    if (!file) {
+      alert("Please select a file");
+      return;
+    }
 
     setLoading(true);
 
     const fileName = `${Date.now()}-${file.name}`;
 
-    // upload to storage
+    // 1. Upload to Storage
     const { error: uploadError } = await supabase.storage
       .from("slider-media")
       .upload(fileName, file);
 
     if (uploadError) {
+      console.log("UPLOAD ERROR:", uploadError);
       alert(uploadError.message);
       setLoading(false);
       return;
     }
 
+    // 2. Get public URL
     const { data } = supabase.storage
       .from("slider-media")
       .getPublicUrl(fileName);
 
-    // save to DB
+    // 3. Insert into DB
     const { error: dbError } = await supabase.from("sliders").insert([
       {
         media_url: data.publicUrl,
         media_type: file.type.startsWith("video") ? "video" : "image",
+        file_name: fileName,
         active: true,
       },
     ]);
 
     if (dbError) {
+      console.log("DB ERROR:", dbError);
       alert(dbError.message);
       setLoading(false);
       return;
@@ -73,36 +82,50 @@ export default function AdminSlider() {
 
     setFile(null);
     setLoading(false);
-
-    // refresh list immediately
     fetchSlides();
-  }
+  };
 
   // =====================
-  // DELETE SLIDE
+  // DELETE SLIDE (FIXED 100%)
   // =====================
   const deleteSlide = async (slide) => {
     try {
-      // extract file path from URL
-      const filePath = slide.media_url.split(
-        "/storage/v1/object/public/slider-media/"
-      )[1];
+      const fileName = slide.file_name;
 
-      // delete from storage
-      await supabase.storage
+      console.log("DELETE FILE:", fileName);
+
+      if (!fileName) {
+        alert("Missing file name in database");
+        return;
+      }
+
+      // 1. Delete from Storage
+      const { error: storageError } = await supabase.storage
         .from("slider-media")
-        .remove([filePath]);
+        .remove([fileName.trim()]);
 
-      // delete from DB
-      await supabase
+      if (storageError) {
+        console.log("STORAGE ERROR:", storageError);
+        throw storageError;
+      }
+
+      // 2. Delete from Database
+      const { error: dbError } = await supabase
         .from("sliders")
         .delete()
         .eq("id", slide.id);
 
-      // update UI instantly
+      if (dbError) {
+        console.log("DB ERROR:", dbError);
+        throw dbError;
+      }
+
+      // 3. Update UI
       setSlides((prev) => prev.filter((s) => s.id !== slide.id));
+
+      alert("Deleted successfully 🚀");
     } catch (err) {
-      console.log(err);
+      console.log("DELETE ERROR:", err);
       alert("Delete failed");
     }
   };
@@ -118,9 +141,11 @@ export default function AdminSlider() {
         </h2>
 
         <label className="flex flex-col items-center justify-center border-2 border-dashed border-gray-600 rounded-lg p-10 cursor-pointer hover:border-blue-500 transition">
+
           <span className="text-gray-300 mb-2">
             Click or drag file here
           </span>
+
           <span className="text-sm text-gray-500">
             PNG, JPG, GIF, MP4
           </span>
@@ -160,15 +185,18 @@ export default function AdminSlider() {
           <p className="text-gray-400">No slides found</p>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+
             {slides.map((slide) => (
               <div
                 key={slide.id}
                 className="relative bg-[#111827] rounded-lg overflow-hidden"
               >
+
                 {slide.media_type === "image" ? (
                   <img
                     src={slide.media_url}
                     className="w-full h-48 object-cover"
+                    alt=""
                   />
                 ) : (
                   <video
@@ -185,8 +213,10 @@ export default function AdminSlider() {
                 >
                   Delete
                 </button>
+
               </div>
             ))}
+
           </div>
         )}
       </div>

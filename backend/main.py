@@ -14,6 +14,7 @@ from database import get_db
 from models import Film, Asset, User
 from routers.assets import router as assets_router
 from routers.films import router as films_router
+from routers.admin_slider import router as slider_router
 
 
 load_dotenv()
@@ -36,8 +37,11 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Routers
 app.include_router(assets_router)
 app.include_router(films_router)
+app.include_router(slider_router)
 
 
 class AdminLogin(BaseModel):
@@ -100,10 +104,6 @@ def admin_login(data: AdminLogin, db: Session = Depends(get_db)):
     }
 
 
-
-
-
-
 @app.put("/assets/{asset_id}")
 def update_asset(
     asset_id: int,
@@ -127,6 +127,8 @@ def update_asset(
         "message": "Asset updated successfully",
         "asset": asset,
     }
+
+
 @app.put("/films/{film_id}")
 def update_film(
     film_id: int,
