@@ -1,11 +1,18 @@
 import { useEffect, useState } from "react";
-import { supabase } from "../supabaseClient";
-
+import { supabase } from "../lib/supabase";
 export default function AdminSlider() {
-  const [file, setFile] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [slides, setSlides] = useState([]);
-  const [fetching, setFetching] = useState(true);
+ type Slide = {
+  id: number;
+  media_url: string;
+  media_type: "image" | "video";
+  file_name: string;
+  active: boolean;
+};
+
+const [file, setFile] = useState<File | null>(null);
+const [loading, setLoading] = useState(false);
+const [slides, setSlides] = useState<Slide[]>([]);
+const [fetching, setFetching] = useState(true);
 
   // =====================
   // FETCH SLIDES
@@ -21,7 +28,7 @@ export default function AdminSlider() {
     if (error) {
       console.log("FETCH ERROR:", error);
     } else {
-      setSlides(data);
+     setSlides((data ?? []) as Slide[]);
     }
 
     setFetching(false);
@@ -88,7 +95,7 @@ export default function AdminSlider() {
   // =====================
   // DELETE SLIDE (FIXED 100%)
   // =====================
-  const deleteSlide = async (slide) => {
+  const deleteSlide = async (slide: Slide) => {
     try {
       const fileName = slide.file_name;
 
@@ -154,7 +161,7 @@ export default function AdminSlider() {
             type="file"
             className="hidden"
             accept="image/*,video/*"
-            onChange={(e) => setFile(e.target.files[0])}
+           onChange={(e) => setFile(e.target.files?.[0] ?? null)}
           />
         </label>
 
