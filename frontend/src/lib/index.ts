@@ -18,6 +18,10 @@ export interface User {
   email: string;
   avatar: string;
   status: "pending" | "approved" | "rejected";
+  role?: string;
+assets_count?: number;
+films_count?: number;
+total_uploads?: number;
 }
 
 export interface Film {

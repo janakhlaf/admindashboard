@@ -8,6 +8,7 @@ from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, Form, Hea
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from supabase import create_client
 
 from database import get_db
@@ -76,8 +77,35 @@ def get_assets(db: Session = Depends(get_db)):
 
 @app.get("/users")
 def get_users(db: Session = Depends(get_db)):
-    return db.query(User).all()
+    users = db.query(User).all()
 
+    result = []
+
+    for user in users:
+        assets_count = (
+            db.query(Asset)
+            .filter(Asset.user_id == user.id)
+            .count()
+        )
+
+        films_count = (
+            db.query(Film)
+            .filter(Film.user_id == user.id)
+            .count()
+        )
+
+        result.append({
+            "id": user.id,
+            "full_name": user.full_name,
+            "email": user.email,
+            "role": user.role,
+            "profile_image": user.profile_image,
+            "assets_count": assets_count,
+            "films_count": films_count,
+            "total_uploads": assets_count + films_count,
+        })
+
+    return result
 
 
 @app.put("/assets/{asset_id}")

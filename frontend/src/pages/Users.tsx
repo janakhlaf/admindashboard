@@ -165,20 +165,24 @@ export default function Users() {
       const data = await getUsers();
 
       const mappedUsers: User[] = data.map((user: any) => ({
-        id: String(user.id),
+  id: String(user.id),
 
-       name: user.full_name || user.email?.split("@")[0] || `User ${user.id}`,
+  name: user.full_name || user.email?.split("@")[0] || `User ${user.id}`,
 
-        email: user.email,
+  email: user.email,
 
-        avatar: user.avatar_url || "",
+  avatar: user.profile_image || "",
 
-        role: "user",
+  role: user.role || "user",
 
-        joinDate: new Date().toISOString(),
+  assets_count: user.assets_count || 0,
+  films_count: user.films_count || 0,
+total_uploads: user.total_uploads || 0,
 
-        status: "active",
-      }));
+  joinDate: new Date().toISOString(),
+
+  status: "active",
+}));
 
       setUsers(mappedUsers);
     } catch {
@@ -329,7 +333,7 @@ export default function Users() {
             const isExpanded =
               expandedUsers.has(user.id);
 
-            const hasContent = total > 0;
+            const hasContent = (user.total_uploads ?? 0) > 0;
 
             return (
               <motion.div
@@ -406,8 +410,7 @@ export default function Users() {
                           : "border-border/40 text-muted-foreground hover:border-primary/40 hover:text-primary"
                       )}
                     >
-                      {total} upload
-                      {total !== 1 ? "s" : ""}
+                     {user.total_uploads} uploads
 
                       {isExpanded ? (
                         <ChevronUp className="w-3.5 h-3.5" />
@@ -437,11 +440,23 @@ export default function Users() {
 
                       <div className="border-t border-border/30 px-6 pb-4 pt-4 space-y-3">
 
-                        <p className="text-xs font-jetbrains text-muted-foreground uppercase tracking-widest mb-3">
-                          Uploaded Content
-                        </p>
+  <p className="text-xs font-jetbrains text-muted-foreground uppercase tracking-widest mb-3">
+    Uploaded Content
+  </p>
 
-                      </div>
+  <div className="grid grid-cols-2 gap-3 text-xs font-jetbrains">
+    <div className="rounded-lg border border-border/30 px-4 py-3">
+      <span className="text-muted-foreground">Films</span>
+      <p className="text-primary mt-1">{user.films_count ?? 0}</p>
+    </div>
+
+    <div className="rounded-lg border border-border/30 px-4 py-3">
+      <span className="text-muted-foreground">Assets</span>
+      <p className="text-primary mt-1">{user.assets_count ?? 0}</p>
+    </div>
+  </div>
+
+</div>
 
                     </motion.div>
                   )}
