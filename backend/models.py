@@ -12,8 +12,6 @@ class User(Base):
     full_name = Column(String)
     email = Column(String)
 
-    password_hash = Column(Text)
-
     bio = Column(Text)
 
     role = Column(String)

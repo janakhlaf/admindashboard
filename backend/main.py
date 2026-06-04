@@ -44,10 +44,6 @@ app.include_router(films_router)
 app.include_router(slider_router)
 
 
-class AdminLogin(BaseModel):
-    email: str
-    password: str
-
 
 class FilmUpdate(BaseModel):
     title: Optional[str] = None
@@ -82,26 +78,6 @@ def get_assets(db: Session = Depends(get_db)):
 def get_users(db: Session = Depends(get_db)):
     return db.query(User).all()
 
-
-@app.post("/admin/login")
-def admin_login(data: AdminLogin, db: Session = Depends(get_db)):
-    admin_user = (
-        db.query(User)
-        .filter(User.email == data.email, User.role == "admin")
-        .first()
-    )
-
-    if not admin_user:
-        raise HTTPException(status_code=401, detail="Invalid admin email")
-
-    if admin_user.password_hash != data.password:
-        raise HTTPException(status_code=401, detail="Invalid password")
-
-    return {
-        "message": "Admin login successful",
-        "admin_id": admin_user.id,
-        "email": admin_user.email,
-    }
 
 
 @app.put("/assets/{asset_id}")
