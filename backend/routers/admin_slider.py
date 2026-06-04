@@ -13,6 +13,7 @@ router = APIRouter(
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY")
 
+
 supabase = create_client(
     SUPABASE_URL,
     SUPABASE_SERVICE_KEY
@@ -21,50 +22,55 @@ supabase = create_client(
 # =========================
 # DELETE SLIDER FILE
 # =========================
-@router.delete("/{file_path:path}")
-async def delete_slider_item(file_path: str):
+BUCKET_NAME = "slider-media"
+
+@router.delete("/{slide_id}")
+async def delete_slider_item(slide_id: str):
 
     try:
-        print("========== DELETE REQUEST ==========")
-        print("FILE PATH:", file_path)
+        result = (
+            supabase
+            .table("sliders")
+            .select("*")
+            .eq("id", slide_id)
+            .single()
+            .execute()
+        )
 
-        if not file_path:
-            raise HTTPException(
-                status_code=400,
-                detail="file_path is required"
-            )
+        if not result.data:
+            raise HTTPException(status_code=404, detail="Slide not found")
 
-        # تنظيف المسار (مهم جداً)
-        clean_path = file_path.strip()
+        file_name = result.data.get("file_name")
 
-        # =========================
-        # DELETE FROM STORAGE
-        # =========================
-        storage_response = supabase.storage \
-            .from_("slider-media") \
-            .remove([clean_path])
+        if not file_name:
+            raise HTTPException(status_code=400, detail="file_name is missing")
 
-        print("SUPABASE STORAGE RESPONSE:", storage_response)
+        supabase.storage.from_(BUCKET_NAME).remove([file_name])
+        print("FILE NAME:", file_name)
 
-        # =========================
-        # CHECK STORAGE RESULT
-        # =========================
-        if not storage_response:
-            raise HTTPException(
-                status_code=500,
-                detail="Failed to delete file from storage"
-            )
+        print("TRY DELETE:", slide_id)
+
+        delete_result = (
+            supabase
+            .table("sliders")
+            .delete()
+            .eq("id", slide_id)
+            .execute()
+        )
+
+        print("DELETE RESULT:", delete_result)
 
         return {
             "success": True,
-            "deleted_file": clean_path,
-            "storage_response": str(storage_response)
+            "message": "Slide deleted successfully"
         }
 
     except Exception as e:
-        print("DELETE ERROR:", str(e))
-
+        print("DELETE ERROR TYPE:", type(e))
+        print("DELETE ERROR:", repr(e))
         raise HTTPException(
             status_code=500,
-            detail=str(e)
+            detail=repr(e)
         )
+
+        

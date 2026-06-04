@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
+
+const API_URL = "http://127.0.0.1:8000";
 export default function AdminSlider() {
  type Slide = {
-  id: number;
+ id: string;
   media_url: string;
   media_type: "image" | "video";
   file_name: string;
@@ -13,6 +15,16 @@ const [file, setFile] = useState<File | null>(null);
 const [loading, setLoading] = useState(false);
 const [slides, setSlides] = useState<Slide[]>([]);
 const [fetching, setFetching] = useState(true);
+const [message, setMessage] = useState("");
+const [messageType, setMessageType] = useState<"success" | "error">("success");
+const showMessage = (text: string, type: "success" | "error" = "success") => {
+  setMessage(text);
+  setMessageType(type);
+
+  setTimeout(() => {
+    setMessage("");
+  }, 3000);
+};
 
   // =====================
   // FETCH SLIDES
@@ -43,7 +55,7 @@ const [fetching, setFetching] = useState(true);
   // =====================
   const uploadSlide = async () => {
     if (!file) {
-      alert("Please select a file");
+      showMessage("Please select a file", "error");
       return;
     }
 
@@ -58,7 +70,7 @@ const [fetching, setFetching] = useState(true);
 
     if (uploadError) {
       console.log("UPLOAD ERROR:", uploadError);
-      alert(uploadError.message);
+      showMessage(uploadError.message, "error");
       setLoading(false);
       return;
     }
@@ -80,12 +92,12 @@ const [fetching, setFetching] = useState(true);
 
     if (dbError) {
       console.log("DB ERROR:", dbError);
-      alert(dbError.message);
+      showMessage(dbError.message, "error");
       setLoading(false);
       return;
     }
 
-    alert("Uploaded successfully 🚀");
+    showMessage("Uploaded successfully ", "success");
 
     setFile(null);
     setLoading(false);
@@ -95,67 +107,93 @@ const [fetching, setFetching] = useState(true);
   // =====================
   // DELETE SLIDE (FIXED 100%)
   // =====================
-  const deleteSlide = async (slide: Slide) => {
-    try {
-      const fileName = slide.file_name;
+ const deleteSlide = async (slide: Slide) => {
+  try {
+    const response = await fetch(`${API_URL}/slider/${slide.id}`, {
+      method: "DELETE",
+    });
 
-      console.log("DELETE FILE:", fileName);
+    const result = await response.json();
 
-      if (!fileName) {
-        alert("Missing file name in database");
-        return;
-      }
-
-      // 1. Delete from Storage
-      const { error: storageError } = await supabase.storage
-        .from("slider-media")
-        .remove([fileName.trim()]);
-
-      if (storageError) {
-        console.log("STORAGE ERROR:", storageError);
-        throw storageError;
-      }
-
-      // 2. Delete from Database
-      const { error: dbError } = await supabase
-        .from("sliders")
-        .delete()
-        .eq("id", slide.id);
-
-      if (dbError) {
-        console.log("DB ERROR:", dbError);
-        throw dbError;
-      }
-
-      // 3. Update UI
-      setSlides((prev) => prev.filter((s) => s.id !== slide.id));
-
-      alert("Deleted successfully 🚀");
-    } catch (err) {
-      console.log("DELETE ERROR:", err);
-      alert("Delete failed");
+    if (!response.ok) {
+     showMessage(result.detail || "Delete failed", "error");
+      return;
     }
-  };
 
-  return (
+    setSlides((prev) => prev.filter((s) => s.id !== slide.id));
+
+    showMessage("Deleted successfully ", "success");
+  } catch (err) {
+    console.log("DELETE ERROR:", err);
+    showMessage("Delete failed", "error");
+  }
+};
+
+  return (<>
+  {message && (
+    <div
+  className={`fixed bottom-6 right-6 z-50 min-w-[340px]
+  px-5 py-4 rounded-2xl
+  backdrop-blur-md
+  bg-[#071226]
+  border
+  shadow-[0_0_20px_rgba(59,130,246,0.35)]
+  animate-in slide-in-from-right duration-300
+  ${
+    messageType === "success"
+      ? "border-cyan-400/70"
+      : "border-red-500/70"
+  }`}
+>
+      <div
+  className={`font-semibold text-sm ${
+    messageType === "success"
+      ? "text-cyan-300"
+      : "text-red-300"
+  }`}
+>
+        {messageType === "success" ? "✓ Success" : "✕ Error"}
+      </div>
+
+      <div className="text-sm text-slate-300 mt-1">{message}</div>
+    </div>
+  )}
     <div className="flex flex-col items-center min-h-screen p-6 gap-10">
 
       {/* ================= UPLOAD BOX ================= */}
       <div className="w-full max-w-xl bg-[#0b0f19] border border-[#1f2937] rounded-xl p-6 shadow-lg">
-
+       
         <h2 className="text-xl font-bold text-white mb-4">
           Upload Slider Media
         </h2>
 
         <label className="flex flex-col items-center justify-center border-2 border-dashed border-gray-600 rounded-lg p-10 cursor-pointer hover:border-blue-500 transition">
 
-          <span className="text-gray-300 mb-2">
-            Click or drag file here
-          </span>
+          {file ? (
+  <div className="flex flex-col items-center gap-2 text-center">
+    <div className="w-12 h-12 rounded-lg bg-blue-600/20 border border-blue-500/40 flex items-center justify-center text-2xl">
+      {file.type.startsWith("video") ? "🎬" : "🖼️"}
+    </div>
 
-          <span className="text-sm text-gray-500">
-            PNG, JPG, GIF, MP4
-          </span>
+    <span className="text-blue-400 text-sm font-medium">
+      File selected
+    </span>
+
+    <span className="text-gray-300 text-sm max-w-xs truncate">
+      {file.name}
+    </span>
+  </div>
+) : (
+  <>
+    <span className="text-gray-300 mb-2">
+      Click or drag file here
+    </span>
+
+    <span className="text-sm text-gray-500">
+      PNG, JPG, GIF, MP4
+    </span>
+  </>
+)}
 
           <input
             type="file"
@@ -165,12 +203,7 @@ const [fetching, setFetching] = useState(true);
           />
         </label>
 
-        {file && (
-          <p className="text-gray-400 mt-3 text-sm">
-            Selected: {file.name}
-          </p>
-        )}
-
+       
         <button
           onClick={uploadSlide}
           disabled={loading}
@@ -227,6 +260,7 @@ const [fetching, setFetching] = useState(true);
           </div>
         )}
       </div>
-    </div>
-  );
+   </div>
+</>
+);
 }
