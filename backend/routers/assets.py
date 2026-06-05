@@ -54,6 +54,17 @@ def upload_asset(
 
     if current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Only admin can upload")
+    if price < 0:
+     raise HTTPException(
+        status_code=400,
+        detail="Price cannot be negative"
+    )
+
+    if price > 99999999.99:
+     raise HTTPException(
+        status_code=400,
+        detail="Price is too large. Maximum allowed price is 99,999,999.99"
+    )
 
     file_ext = file.filename.split(".")[-1]
     file_name = f"admin/{uuid.uuid4()}.{file_ext}"
@@ -89,7 +100,6 @@ def upload_asset(
         "bucket_path": file_name,
         "file_type": file_ext,
         "file_size": f"{round(len(file_bytes) / 1024 / 1024, 2)} MB",
-        "price": price,
         "source_type": "admin",
         "status": "approved",
         "rejection_reason": None,

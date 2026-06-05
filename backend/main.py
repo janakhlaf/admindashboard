@@ -2,6 +2,7 @@ from typing import Optional
 import os
 import uuid
 import json
+from urllib.parse import urlparse, unquote
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, Form, Header
@@ -165,7 +166,32 @@ def delete_asset(asset_id: int, db: Session = Depends(get_db)):
     if not asset:
         raise HTTPException(status_code=404, detail="Asset not found")
 
+    try:
+        # حذف الملف الأصلي من assets_private
+        if asset.bucket_path:
+            supabase.storage.from_("assets_private").remove(
+                [asset.bucket_path]
+            )
+
+        # حذف ملف الـ preview من assets_previwe
+        if asset.preview_url:
+            parsed_path = unquote(urlparse(asset.preview_url).path)
+
+            marker = "/storage/v1/object/public/assets_previwe/"
+
+            if marker in parsed_path:
+                preview_path = parsed_path.split(marker)[1]
+
+                supabase.storage.from_("assets_previwe").remove(
+                    [preview_path]
+                )
+
+    except Exception as e:
+        print("Storage delete error:", e)
+
     db.delete(asset)
     db.commit()
 
-    return {"message": "Asset deleted successfully"}
+    return {
+        "message": "Asset deleted from database and storage successfully"
+    }
