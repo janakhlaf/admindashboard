@@ -120,7 +120,7 @@ def upload_film(
         "file_size": f"{round(len(film_bytes) / 1024 / 1024, 2)} MB",
         "source_type": "admin",
         "status": "approved",
-        "rejection_reason": None,
+       
     }
 
     new_film = Film(**film_data)
@@ -144,7 +144,7 @@ def approve_film(film_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Film not found")
 
     film.status = "approved"
-    film.rejection_reason = None
+    
     user = db.query(User).filter(User.id == film.user_id).first()
 
     import requests

@@ -102,7 +102,7 @@ def upload_asset(
         "file_size": f"{round(len(file_bytes) / 1024 / 1024, 2)} MB",
         "source_type": "admin",
         "status": "approved",
-        "rejection_reason": None,
+        
     }
 
     new_asset = Asset(**asset_data)

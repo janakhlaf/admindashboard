@@ -44,7 +44,7 @@ class Film(Base):
     source_type = Column(String)
     status = Column(String)
 
-    rejection_reason = Column(Text)
+    
 
     duration = Column(String)
     file_size = Column(String)
@@ -76,7 +76,7 @@ class Asset(Base):
     source_type = Column(String)
     status = Column(String)
 
-    rejection_reason = Column(Text)
+    
 
 
 class AdminLog(Base):
