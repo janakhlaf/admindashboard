@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Header, HTTPException, UploadFile, File, Form, Depends
-from supabase import create_client
+from supabase import create_client, ClientOptions  # 🔥 أضفنا ClientOptions هنا
 from sqlalchemy.orm import Session
 from database import get_db
 from models import Film, User
@@ -10,6 +10,7 @@ import os
 import uuid
 import json
 import requests
+import httpx  # 🔥 أضفنا مكتبة httpx لإعدادات الـ Timeout
 
 router = APIRouter(prefix="/admin/films", tags=["Admin Films"])
 
@@ -19,7 +20,15 @@ SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY")
 THUMBNAIL_BUCKET = os.getenv("THUMBNAIL_BUCKET", "thumbnail_previw")
 FILMS_BUCKET = os.getenv("FILMS_BUCKET", "films_private")
 
-supabase = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
+# 🔥 إنشاء الـ Supabase Client مع زيادة مهلة الرفع (Timeout) لـ 20 دقيقة (1200 ثانية) لحل مشكلة الملفات الكبيرة
+supabase = create_client(
+    SUPABASE_URL, 
+    SUPABASE_SERVICE_KEY,
+    options=ClientOptions(
+        postgrest_client_timeout=1200,
+        storage_client_timeout=1200  # السطر السحري لمنع httpx.ReadTimeout
+    )
+)
 
 def format_duration(seconds: float):
     total_seconds = int(seconds)
@@ -97,7 +106,7 @@ async def upload_film(
     )
 
     # 5. 🔥 رفع الفيديو الكبير لـ Supabase مباشرة من الهارد ديسك كمجرى (Stream/File Path)
-    # هاد بيمنع الـ Timeout تماماً لأن الرفع بصير كـ Stream سريع ومستقر
+    # هاد بيمنع الـ Timeout تماماً لأن الرفع بصير كـ Stream سريع ومستقر وبدون استهلاك للرام
     with open(temp_video_path, "rb") as f:
         supabase.storage.from_(FILMS_BUCKET).upload(
             film_name,

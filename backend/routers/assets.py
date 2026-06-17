@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Header, HTTPException, UploadFile, File, Form, Depends
-from supabase import create_client
+from supabase import create_client, ClientOptions  # 🔥 أضفنا ClientOptions هنا
 from sqlalchemy.orm import Session
 from database import get_db
 from models import Asset, User
@@ -9,6 +9,7 @@ import os
 import uuid
 import json
 import requests
+import httpx  # 🔥 أضفنا مكتبة httpx لإعدادات الـ Timeout
 
 router = APIRouter(prefix="/admin/assets", tags=["Admin Assets"])
 
@@ -17,7 +18,15 @@ SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY")
 PREVIEW_BUCKET = os.getenv("ASSETS_PREVIEW_BUCKET", "assets_previwe")
 PRIVATE_BUCKET = os.getenv("ASSETS_PRIVATE_BUCKET", "assets_private")
 
-supabase = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
+# 🔥 إنشاء الـ Supabase Client مع زيادة مهلة الرفع (Timeout) لـ 20 دقيقة (1200 ثانية) لحل مشكلة الملفات الكبيرة
+supabase = create_client(
+    SUPABASE_URL, 
+    SUPABASE_SERVICE_KEY,
+    options=ClientOptions(
+        postgrest_client_timeout=1200,
+        storage_client_timeout=1200  # السطر السحري لمنع httpx.ReadTimeout
+    )
+)
 
 
 @router.post("/upload")
@@ -65,7 +74,7 @@ async def upload_asset(
     file_ext = file.filename.split(".")[-1]
     file_name = f"admin/{uuid.uuid4()}.{file_ext}"
 
-    # 🔥 الحل لحماية الرام: حفظ ملف الـ Asset الكبير داخل ملف مؤقت بالهارد ديسك على أجزاء
+    # الحل لحماية الرام: حفظ ملف الـ Asset الكبير داخل ملف مؤقت بالهارد ديسك على أجزاء
     with tempfile.NamedTemporaryFile(delete=False, suffix=f".{file_ext}") as temp_asset:
         temp_asset_path = temp_asset.name
         while chunk := await file.read(1024 * 1024):  # قراءة 1 ميجابايت في كل مرة
@@ -74,7 +83,7 @@ async def upload_asset(
     # حساب الحجم الحقيقي للملف من الهارد ديسك مباشرة بالميجابايت
     file_size_mb = round(os.path.getsize(temp_asset_path) / 1024 / 1024, 2)
 
-    # 🔥 رفع الملف للـ Buckets كـ Stream مفتوح مباشرة من الهارد ديسك
+    # رفع الملف للـ Buckets كـ Stream مفتوح مباشرة من الهارد ديسك
     with open(temp_asset_path, "rb") as f:
         # الرفع لـ Preview Bucket
         supabase.storage.from_(PREVIEW_BUCKET).upload(
