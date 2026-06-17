@@ -1,15 +1,14 @@
-from fastapi import APIRouter, Header, HTTPException, UploadFile, File, Form
+from fastapi import APIRouter, Header, HTTPException, UploadFile, File, Form, Depends
 from supabase import create_client
-from fastapi import Depends
 from sqlalchemy.orm import Session
 from database import get_db
 from models import Asset, User
 from embedding_service import generate_asset_embedding
+import tempfile
 import os
 import uuid
 import json
 import requests
-
 
 router = APIRouter(prefix="/admin/assets", tags=["Admin Assets"])
 
@@ -22,7 +21,7 @@ supabase = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
 
 
 @router.post("/upload")
-def upload_asset(
+async def upload_asset(
     authorization: str = Header(None),
     name: str = Form(...),
     category: str = Form(""),
@@ -36,7 +35,6 @@ def upload_asset(
         raise HTTPException(status_code=401, detail="Missing token")
 
     token = authorization.replace("Bearer ", "")
-
     auth_user_response = supabase.auth.get_user(token)
     auth_user = auth_user_response.user
 
@@ -45,7 +43,7 @@ def upload_asset(
 
     current_user = (
         db.query(User)
-     .filter(User.auth_user_id == uuid.UUID(str(auth_user.id)))
+        .filter(User.auth_user_id == uuid.UUID(str(auth_user.id)))
         .first()
     )
 
@@ -54,40 +52,52 @@ def upload_asset(
 
     if current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Only admin can upload")
+        
     if price < 0:
-     raise HTTPException(
-        status_code=400,
-        detail="Price cannot be negative"
-    )
+        raise HTTPException(status_code=400, detail="Price cannot be negative")
 
     if price > 99999999.99:
-     raise HTTPException(
-        status_code=400,
-        detail="Price is too large. Maximum allowed price is 99,999,999.99"
-    )
+        raise HTTPException(
+            status_code=400,
+            detail="Price is too large. Maximum allowed price is 99,999,999.99"
+        )
 
     file_ext = file.filename.split(".")[-1]
     file_name = f"admin/{uuid.uuid4()}.{file_ext}"
 
-    file_bytes = file.file.read()
+    # 🔥 الحل لحماية الرام: حفظ ملف الـ Asset الكبير داخل ملف مؤقت بالهارد ديسك على أجزاء
+    with tempfile.NamedTemporaryFile(delete=False, suffix=f".{file_ext}") as temp_asset:
+        temp_asset_path = temp_asset.name
+        while chunk := await file.read(1024 * 1024):  # قراءة 1 ميجابايت في كل مرة
+            temp_asset.write(chunk)
 
-    supabase.storage.from_(PREVIEW_BUCKET).upload(
-        file_name,
-        file_bytes,
-        {
-            "content-type": file.content_type
-        }
-    )
-    supabase.storage.from_(PRIVATE_BUCKET).upload(
-    file_name,
-    file_bytes,
-    {
-        "content-type": file.content_type
-    }
-)
+    # حساب الحجم الحقيقي للملف من الهارد ديسك مباشرة بالميجابايت
+    file_size_mb = round(os.path.getsize(temp_asset_path) / 1024 / 1024, 2)
+
+    # 🔥 رفع الملف للـ Buckets كـ Stream مفتوح مباشرة من الهارد ديسك
+    with open(temp_asset_path, "rb") as f:
+        # الرفع لـ Preview Bucket
+        supabase.storage.from_(PREVIEW_BUCKET).upload(
+            file_name,
+            f,
+            {"content-type": file.content_type}
+        )
+        
+        # إرجاع المؤشر لأول الملف عشان يقرأه من البداية للـ Bucket الثاني
+        f.seek(0)
+        
+        # الرفع لـ Private Bucket
+        supabase.storage.from_(PRIVATE_BUCKET).upload(
+            file_name,
+            f,
+            {"content-type": file.content_type}
+        )
+
+    # حذف وتنظيف الملف المؤقت من السيرفر
+    if os.path.exists(temp_asset_path):
+        os.remove(temp_asset_path)
 
     preview_url = supabase.storage.from_(PREVIEW_BUCKET).get_public_url(file_name)
-
 
     asset_data = {
         "user_id": current_user.id,
@@ -99,14 +109,12 @@ def upload_asset(
         "preview_url": preview_url,
         "bucket_path": file_name,
         "file_type": file_ext,
-        "file_size": f"{round(len(file_bytes) / 1024 / 1024, 2)} MB",
+        "file_size": f"{file_size_mb} MB",
         "source_type": "admin",
         "status": "approved",
-        
     }
 
     new_asset = Asset(**asset_data)
-
     db.add(new_asset)
     db.commit()
     db.refresh(new_asset)
@@ -117,16 +125,14 @@ def upload_asset(
         "asset_id": new_asset.id
     }
 
+
 @router.patch("/{asset_id}/approve")
 def approve_asset(asset_id: int, db: Session = Depends(get_db)):
-
     asset = db.query(Asset).filter(Asset.id == asset_id).first()
-
     if not asset:
         raise HTTPException(status_code=404, detail="Asset not found")
 
     asset.status = "approved"
-
     user = db.query(User).filter(User.id == asset.user_id).first()
 
     if user and user.email:
@@ -153,15 +159,12 @@ def approve_asset(asset_id: int, db: Session = Depends(get_db)):
         )
 
     db.commit()
-
     return {"message": "Asset approved successfully"}
 
 
 @router.patch("/{asset_id}/reject")
 def reject_asset(asset_id: int, db: Session = Depends(get_db)):
-
     asset = db.query(Asset).filter(Asset.id == asset_id).first()
-
     if not asset:
         raise HTTPException(status_code=404, detail="Asset not found")
 
