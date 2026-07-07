@@ -35,3 +35,46 @@ all edits done without the payment issus.****
 ## git clean -fd
 ********************************************************************
 slider added ////
+
+# Admin Dashboard
+
+A web-based admin dashboard developed as part of the WebApproved graduation project at Arab American University.
+
+The dashboard allows administrators to manage platform content, including films, digital assets, users, and uploaded resources through a clean and responsive interface.
+
+---
+
+## Technologies Used
+
+- React.js
+- TypeScript
+- HTML5
+- CSS3
+- Vite
+- Git
+- GitHub
+- Figma
+
+---
+
+## Features
+
+- Admin Login
+- Manage Films
+- Manage Digital Assets
+- Upload Content
+- View Users
+- Dashboard Interface
+- Responsive Design
+
+---
+
+## Project Relation
+
+This dashboard is connected to the main WebApproved platform and was developed to support content management and administrative operations.
+
+---
+
+## Academic Project
+
+Developed as part of a graduation project for the Bachelor's degree in Multimedia at Arab American University (2026).
