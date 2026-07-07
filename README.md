@@ -53,7 +53,6 @@ The dashboard allows administrators to manage platform content, including films,
 - Vite
 - Git
 - GitHub
-- Figma
 
 ---
 
